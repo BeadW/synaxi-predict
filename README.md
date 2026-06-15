@@ -1,5 +1,9 @@
 # synaxi-predict
 
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/)
+[![CI](https://github.com/BeadW/synaxi-predict/actions/workflows/ci.yml/badge.svg)](https://github.com/BeadW/synaxi-predict/actions)
+
 Predicts the cost, turn count, and pass rate of a coding task before you run it — so you can pick the right model without wasting tokens on a bad fit.
 
 ## What it does
@@ -17,20 +21,27 @@ The predictor is an MLP trained on ~53k agent runs across SWE-bench, SWE-smith, 
 
 ## Quick start
 
+**Install from source:**
+
 ```bash
-git clone https://github.com/bradleyjwilliams/synaxi-predict
+git clone https://github.com/BeadW/synaxi-predict
 cd synaxi-predict
+git lfs pull                        # download the trained model (~190MB)
 pip install -e .
 python -m predictor.predict "Fix the failing migration" --models single
 ```
 
-Or as a Claude Code slash command — copy to your commands directory:
+**As a Claude Code slash command** (works from any project):
 
 ```bash
+git clone https://github.com/BeadW/synaxi-predict ~/synaxi-predict
+cd ~/synaxi-predict && git lfs pull && pip install -e .
 cp .claude/commands/predict-cost.md ~/.claude/commands/
 ```
 
 Then in any Claude Code session: `/predict-cost Fix the failing migration`
+
+The command auto-detects the current repo and uses its code complexity as an additional signal.
 
 ## Training data
 
@@ -104,3 +115,11 @@ data/models/             Trained model artifact (Git LFS)
 data/code_features.json  Tree-sitter features per benchmark instance
 .claude/commands/        Claude Code slash command
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). PRs welcome — especially new benchmark importers.
+
+## License
+
+[MIT](LICENSE) — use freely, attribution appreciated.

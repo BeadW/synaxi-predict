@@ -21,3 +21,6 @@ temp_*.py
 
 # IDEs
 .DS_Store
+PLAN.md
+config.yaml
+temp_test_run.py

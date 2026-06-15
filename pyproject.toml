@@ -3,19 +3,64 @@ requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "synaxi-predict-harness"
+name = "synaxi-predict"
 version = "0.1.0"
+description = "Predicts cost, turns, and pass rate for coding agent runs before they start"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+authors = [
+    { name = "Brad Williams", email = "bradleyjwilliams567@gmail.com" },
+]
+keywords = ["llm", "cost-prediction", "claude", "agents", "benchmark"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
+    "anthropic>=0.40",
+    "numpy>=1.24",
+    "scikit-learn>=1.3",
+    "scipy>=1.11",
+    "tiktoken>=0.7",
+    "pandas>=2.0",
+    "python-dotenv",
+    "huggingface-hub>=0.20",
+]
+
+[project.optional-dependencies]
+dev = [
     "pytest>=7.4",
     "pytest-bdd>=7.0",
     "pytest-xdist",
-    "anthropic>=0.40",
-    "python-dotenv",
-    "xgboost",
-    "scikit-learn",
-    "numpy",
+    "ruff",
 ]
+data = [
+    "datasets>=2.0",
+    "tree-sitter>=0.21",
+    "tree-sitter-python>=0.21",
+    "pyarrow>=14.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/BeadW/synaxi-predict"
+Repository = "https://github.com/BeadW/synaxi-predict"
+Issues = "https://github.com/BeadW/synaxi-predict/issues"
+
+[project.scripts]
+synaxi-predict = "predictor.predict:main"
 
 [tool.pytest.ini_options]
 testpaths = ["harness/tests"]
 bdd_features_base_dir = "features/"
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
