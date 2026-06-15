@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "synaxi-predict-harness"
+version = "0.1.0"
+dependencies = [
+    "pytest>=7.4",
+    "pytest-bdd>=7.0",
+    "pytest-xdist",
+    "anthropic>=0.40",
+    "python-dotenv",
+    "xgboost",
+    "scikit-learn",
+    "numpy",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["harness/tests"]
+bdd_features_base_dir = "features/"
