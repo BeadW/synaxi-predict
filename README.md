@@ -35,7 +35,22 @@ Predictions use an MLP trained on ~53k agent runs (SWE-bench, SWE-smith, OpenHan
 
 ## Install
 
-**1. Install the Python package** (provides the predictor CLI and model artifact):
+Inside any Claude Code session:
+
+```
+/plugin marketplace add BeadW/synaxi-predict
+/plugin install synaxi-predict
+```
+
+On the next session start, Claude Code automatically:
+- Installs the Python package (`pip install -e`)
+- Downloads the model artifact (~190MB) from GitHub Releases into your platform data directory (`~/Library/Application Support/synaxi-predict/` on macOS, `~/.local/share/synaxi-predict/` on Linux)
+
+Updates happen the same way — bump `version` in `.claude-plugin/plugin.json`, release, and the hook re-runs on next session.
+
+Copy `.env.example` to `.env` and add your `ANTHROPIC_API_KEY` if you plan to run benchmarks.
+
+### Manual install (development)
 
 ```bash
 git clone https://github.com/BeadW/synaxi-predict ~/synaxi-predict
@@ -43,17 +58,6 @@ cd ~/synaxi-predict
 git lfs pull        # download trained model (~190MB)
 pip install -e .
 ```
-
-**2. Install the Claude Code plugin** (run these inside a Claude Code session):
-
-```
-/plugin marketplace add BeadW/synaxi-predict
-/plugin install synaxi-predict
-```
-
-The plugin auto-updates whenever a new version is released — no manual file copying needed.
-
-Copy `.env.example` to `.env` and add your `ANTHROPIC_API_KEY` if you plan to run benchmarks.
 
 ## Usage
 

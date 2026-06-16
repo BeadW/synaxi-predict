@@ -34,13 +34,13 @@ The repo ships as a Claude Code plugin. Install once inside a Claude Code sessio
 /plugin install synaxi-predict
 ```
 
-Claude Code auto-updates the plugin on startup when a new version is released (version is tracked in `.claude-plugin/plugin.json`).
+On the next session start, `scripts/plugin-setup.sh` runs automatically via the `SessionStart` hook. It installs the Python package from `$CLAUDE_PLUGIN_ROOT` and downloads `predictor_v1.pkl` from GitHub Releases into the platform data directory — no manual steps needed.
 
 **`predict-cost`** (`commands/predict-cost.md`) — slash command, user-invoked. Shows prediction table, asks for model choice, dispatches subagent, records actuals.
 
 **`agent-dispatch`** (`skills/agent-dispatch/SKILL.md`) — `user-invocable: false`, Claude-invoked. Fires automatically whenever Claude would spawn a subagent. Uses dynamic `!` injection to run the prediction at skill load time (tree-sitter features included), then follows the same predict → dispatch → parse → eval → record flow.
 
-When releasing a new version, bump `version` in `.claude-plugin/plugin.json` — that's the signal Claude Code uses to pull updates.
+**Releasing a new version:** bump `version` in `.claude-plugin/plugin.json`, upload the new model artifact to GitHub Releases, and tag. The hook re-runs on next session start for all users.
 
 ## Contributing actuals data
 
