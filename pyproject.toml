@@ -33,6 +33,7 @@ dependencies = [
     "pandas>=2.0",
     "python-dotenv",
     "huggingface-hub>=0.20",
+    "platformdirs>=4.0",
 ]
 
 [project.optional-dependencies]

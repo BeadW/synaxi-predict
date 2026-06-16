@@ -14,12 +14,8 @@ allowed-tools: Bash AskUserQuestion Agent
 ## Cost prediction
 
 ```!
-PREDICT="$(find ~ -maxdepth 4 -name "predict" -path "*/synaxi-predict/bin/*" 2>/dev/null | head -1)"
-if [ -n "$PREDICT" ]; then
-  "$PREDICT" "$ARGUMENTS" --models single --repo-path "$(pwd)"
-else
-  echo "WARNING: synaxi-predict not found at ~/synaxi-predict — skipping prediction"
-fi
+python3 -m predictor.predict "$ARGUMENTS" --models single --repo-path "$(pwd)" 2>/dev/null \
+  || echo "WARNING: synaxi-predict not installed — restart Claude Code to trigger setup"
 ```
 
 Parse the block above. Store internally:
