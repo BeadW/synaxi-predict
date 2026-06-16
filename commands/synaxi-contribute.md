@@ -10,89 +10,13 @@ python3 -m predictor.contribute --list 2>/dev/null
 
 Parse the JSON array. If it is empty (`[]`), tell the user "No uncontributed records found." and stop.
 
-Store the array as **RECORDS**. Each record has:
-- `prediction_id` — 8-char hex
-- `model` — e.g. `single-haiku`
-- `actual_cost` — USD
-- `actual_turns` — integer
-- `passed` — true/false/null
-- `task_text` — task description
-- `code_features` — tree-sitter snapshot (non-empty means code features were captured)
+Store the array as **RECORDS**.
 
 ---
 
-## Step 2: Ask what to contribute
+## Step 2: Show payload and confirm
 
-Use `AskUserQuestion` with:
-
-**Question** — "Which records do you want to contribute?"
-- label: `Contribute all` — description: `Share all N uncontributed records`
-- label: `Select individual` — description: `Pick specific records to share`
-- label: `Cancel` — description: `Don't contribute anything`
-
-If the user picks **Cancel**, stop.
-
----
-
-## Step 3a: If "Contribute all"
-
-Store **SELECTED_RECORDS** = all records from RECORDS.
-
-Skip to Step 4.
-
----
-
-## Step 3b: If "Select individual"
-
-`AskUserQuestion` supports a maximum of 4 options per question. Paginate through
-RECORDS in chunks of 4, asking one question per page. Accumulate all ticked records
-across pages into **SELECTED_RECORDS**.
-
-For each page (chunk of up to 4 records):
-
-Use `AskUserQuestion` with `multiSelect: true`:
-
-**Question** — "Select records to contribute (page P of N):"
-
-One option per record in this chunk:
-- **label**: `<prediction_id>`
-- **description**: `<model> · $<actual_cost> · <actual_turns> turns · passed:<passed> · <first 60 chars of task_text>`
-
-Note: do NOT add `preview` to these options — previews are not supported on
-multiSelect questions and will be silently ignored.
-
-**Important**: if the user selects nothing on a page (or dismisses it), treat
-that as "no selections from this page" and continue to the next page. Do NOT
-stop early. Only evaluate totals after all pages have been shown.
-
-After all pages: collect all ticked records into **SELECTED_RECORDS**.
-
-If none selected across all pages, tell the user "Nothing selected." and stop.
-
----
-
-## Step 4: Confirm code features
-
-For each record in SELECTED_RECORDS, check whether `code_features` has `has_code_features: 1`.
-
-If any records are missing code features (empty dict or `has_code_features` != 1), use `AskUserQuestion`:
-
-**Question** — "N record(s) have no tree-sitter code features (recorded before tree-sitter was installed). They contribute less signal to the model. What would you like to do?"
-- label: `Contribute anyway` — description: `Include all selected records`
-- label: `Skip those` — description: `Only contribute records that have code features`
-- label: `Cancel` — description: `Don't contribute anything`
-
-If **Cancel**: stop.
-If **Skip those**: remove records where `has_code_features != 1` from SELECTED_RECORDS.
-If **Contribute anyway**: continue unchanged.
-
-If all selected records have code features, skip this step entirely.
-
----
-
-## Step 5: Show exact payload and confirm
-
-Build the full JSON payload that will be posted — this is exactly what the contribution issue will contain:
+Build the full JSON payload that will be posted as a GitHub issue:
 
 ```json
 {
@@ -111,28 +35,27 @@ Build the full JSON payload that will be posted — this is exactly what the con
 }
 ```
 
-Use `AskUserQuestion` (single-select) with the payload as the **preview** on the confirm option:
+Use `AskUserQuestion` (single-select) with the payload as the **preview** on the contribute option:
 
-**Question** — "Ready to contribute N record(s). This is the exact data that will be posted as a GitHub issue:"
-- label: `Confirm and contribute` — description: `Post the data shown` — **preview**: the full JSON payload above
+**Question** — "Found N uncontributed record(s). This is the exact data that will be posted as a GitHub issue:"
+- label: `Contribute all` — description: `Post all N records shown` — **preview**: the full JSON payload above
 - label: `Cancel` — description: `Don't send anything`
 
 If the user picks **Cancel**, stop.
 
 ---
 
-## Step 6: Contribute
+## Step 3: Contribute
 
 ```bash
-bin/contribute --ids SELECTED_IDS_SPACE_SEPARATED
+bin/contribute --all
 ```
 
 Show the full output to the user.
 
 ---
 
-## Step 7: Report
+## Step 4: Report
 
-Tell the user how many records were contributed and remind them that more actuals
-(especially with tree-sitter code features) improve the model's calibration for
-real Claude Code tasks vs benchmark data.
+Tell the user how many records were contributed and remind them that actuals
+with tree-sitter code features contribute the most signal for retraining.
