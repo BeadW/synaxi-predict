@@ -130,30 +130,37 @@ def _detect_git_root() -> Optional[Path]:
     return None
 
 
-def _make_feature_row(artifact: Dict, text: str, repo_path: Optional[Path]) -> np.ndarray:
+def _extract_repo_stats(artifact: Dict, task_text: str, repo_path: Optional[Path]) -> Dict:
+    """Compute tree-sitter code features for the repo once, before the per-model loop."""
+    cols = artifact.get("code_cols", [])
+    if not cols or not repo_path or not repo_path.exists():
+        return {}
+    try:
+        import sys
+        sys.path.insert(0, str(PROJECT_ROOT))
+        from scripts.extract_code_features import repo_aggregate_stats
+        return repo_aggregate_stats(repo_path, task_description=task_text)
+    except Exception:
+        return {}
+
+
+def _make_feature_row(artifact: Dict, text: str, repo_stats: Dict) -> np.ndarray:
     """Build a single dense feature row: L2-normalized TF-IDF + MaxAbsScaled code."""
     from scipy.sparse import hstack, csr_matrix
 
-    tfidf      = artifact["tfidf"]
-    l2_norm    = artifact.get("l2_norm")
+    tfidf       = artifact["tfidf"]
+    l2_norm     = artifact.get("l2_norm")
     code_scaler = artifact.get("code_scaler")
-    cols       = artifact.get("code_cols", [])
+    cols        = artifact.get("code_cols", [])
 
     X_text = tfidf.transform([text])
     if l2_norm:
         X_text = l2_norm.transform(X_text)
 
     raw_code = np.zeros((1, len(cols)), dtype=np.float32)
-    if cols and repo_path and repo_path.exists():
-        try:
-            import sys
-            sys.path.insert(0, str(PROJECT_ROOT))
-            from scripts.extract_code_features import repo_aggregate_stats
-            stats = repo_aggregate_stats(repo_path, task_description=text)
-            for i, col in enumerate(cols):
-                raw_code[0, i] = float(stats.get(col, 0))
-        except Exception:
-            pass
+    if repo_stats and cols:
+        for i, col in enumerate(cols):
+            raw_code[0, i] = float(repo_stats.get(col, 0))
 
     if code_scaler and cols:
         X_code = csr_matrix(code_scaler.transform(raw_code))
@@ -166,7 +173,8 @@ def predict(
     models: Optional[List[str]] = None,
     model_path: Path = DEFAULT_MODEL_PATH,
     repo_path: Optional[Path] = None,
-) -> List[Dict]:
+) -> tuple[List[Dict], Dict]:
+    """Return (results, repo_stats). repo_stats is the raw code feature dict for logging."""
     artifact  = load_artifact(model_path)
     mdls      = artifact["models"]
     available = artifact.get("model_list", [])
@@ -184,10 +192,12 @@ def predict(
     if repo_path is None:
         repo_path = _detect_git_root()
 
+    repo_stats = _extract_repo_stats(artifact, task_text, repo_path)
+
     results = []
     for model_id in predict_for:
         text = f"modelname {model_id.replace('-', ' ')} endmodelname {task_text}"
-        X = _make_feature_row(artifact, text, repo_path)
+        X = _make_feature_row(artifact, text, repo_stats)
 
         log_xform   = artifact.get("log_transform", False)
         clip_bounds = artifact.get("clip_bounds", {})
@@ -214,7 +224,7 @@ def predict(
         })
 
     results.sort(key=lambda r: r["est_cost"])
-    return results
+    return results, repo_stats
 
 
 def recommend(results: List[Dict]) -> tuple[str, str]:
@@ -235,17 +245,18 @@ def recommend(results: List[Dict]) -> tuple[str, str]:
     return cheapest["model"], "  ·  ".join(reason_parts)
 
 
-def _log_prediction(task_text: str, results: List[Dict], rec_model: str) -> str:
+def _log_prediction(task_text: str, results: List[Dict], rec_model: str, repo_stats: Dict) -> str:
     import uuid
     from datetime import datetime, timezone
     pred_id = uuid.uuid4().hex[:8]
     rec = next((r for r in results if r["model"] == rec_model), results[0] if results else {})
     entry = {
-        "prediction_id": pred_id,
-        "timestamp":     datetime.now(timezone.utc).isoformat(),
-        "task":          task_text[:500],
+        "prediction_id":  pred_id,
+        "timestamp":      datetime.now(timezone.utc).isoformat(),
+        "task":           task_text[:500],
         "recommendation": rec,
-        "all_results":   results,
+        "all_results":    results,
+        "code_features":  repo_stats,
     }
     PREDICTIONS_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(PREDICTIONS_FILE, "a") as f:
@@ -286,10 +297,10 @@ def main() -> None:
         sys.exit(1)
 
     filter_models = [m.strip() for m in args.models.split(",")] if args.models else None
-    results = predict(task_text, models=filter_models, model_path=args.model_path,
-                      repo_path=args.repo_path)
+    results, repo_stats = predict(task_text, models=filter_models, model_path=args.model_path,
+                                  repo_path=args.repo_path)
     rec_model, rec_reason = recommend(results)
-    pred_id = _log_prediction(task_text, results, rec_model)
+    pred_id = _log_prediction(task_text, results, rec_model, repo_stats)
 
     artifact = load_artifact(args.model_path)
     repo_used = args.repo_path or _detect_git_root()

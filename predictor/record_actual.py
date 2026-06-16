@@ -89,6 +89,7 @@ def record(pred_id: str, actual_cost: float | None, actual_turns: int, passed: b
         "actual_turns":    actual_turns,
         "passed":          passed,
         "turns_error":     actual_turns - rec.get("est_turns", 0),
+        "code_features":   pred.get("code_features", {}),
     }
     if actual_cost is not None:
         actual["cost_error"] = round(actual_cost - rec.get("est_cost", 0), 6)
