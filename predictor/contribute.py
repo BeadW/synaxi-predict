@@ -222,8 +222,6 @@ def save_contributed_ids(new_ids: list[str]) -> None:
 
 def prompt_user_selection(records: list[dict]) -> list[dict]:
     """Prompt user to select which records to contribute."""
-    import sys
-
     print("  Select which records to share (all / pick / none):")
     print("    [a] Share all records")
     print("    [p] Pick individual records")
