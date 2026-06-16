@@ -6,6 +6,16 @@
 
 Predicts the cost, turn count, and pass rate of a Claude Code task before it runs — so you can pick the right model without wasting tokens on a bad fit. Closes the loop by capturing actual results and feeding them back into the model.
 
+---
+
+**Part of the [Synaxi](https://synaxi.ai) ecosystem.**
+
+[Synaxi](https://synaxi.ai) is a macOS app that cuts Claude API costs by stripping token waste from every request before it leaves your machine — deduplicating tool schemas, pruning stale conversation history, compressing verbose JSON, and more. Average reduction: 40%+ per request, with no code changes and under 1ms added latency. Free for personal use.
+
+`synaxi-predict` tackles the complementary problem: picking the right model *before* the task runs. Together they cover both sides of Claude cost control — less waste per token, and fewer tokens on the wrong model.
+
+---
+
 ## How it works
 
 ```
