@@ -27,16 +27,31 @@ A full test suite is planned. For now CI runs the smoke test and lint on every P
 
 ## Skills
 
-The repo ships two Claude Code skills. Both live under `.claude/` and should be installed to `~/.claude/` for personal use:
+The repo ships as a Claude Code plugin. Install once inside a Claude Code session:
 
-```bash
-cp .claude/commands/predict-cost.md ~/.claude/commands/
-cp -r .claude/skills/agent-dispatch ~/.claude/skills/
+```
+/plugin marketplace add BeadW/synaxi-predict
+/plugin install synaxi-predict
 ```
 
-**`predict-cost`** (`.claude/commands/predict-cost.md`) — slash command, user-invoked. Shows prediction table, asks for model choice, dispatches subagent, records actuals.
+Claude Code auto-updates the plugin on startup when a new version is released (version is tracked in `.claude-plugin/plugin.json`).
 
-**`agent-dispatch`** (`.claude/skills/agent-dispatch/SKILL.md`) — `user-invocable: false`, Claude-invoked. Fires automatically whenever Claude would spawn a subagent. Uses dynamic `!` injection to run the prediction at skill load time (tree-sitter features included), then follows the same predict → dispatch → parse → eval → record flow.
+**`predict-cost`** (`commands/predict-cost.md`) — slash command, user-invoked. Shows prediction table, asks for model choice, dispatches subagent, records actuals.
+
+**`agent-dispatch`** (`skills/agent-dispatch/SKILL.md`) — `user-invocable: false`, Claude-invoked. Fires automatically whenever Claude would spawn a subagent. Uses dynamic `!` injection to run the prediction at skill load time (tree-sitter features included), then follows the same predict → dispatch → parse → eval → record flow.
+
+When releasing a new version, bump `version` in `.claude-plugin/plugin.json` — that's the signal Claude Code uses to pull updates.
+
+## Contributing actuals data
+
+If you've accumulated real task runs, share them to improve the model:
+
+```bash
+bin/contribute      # shows table, prompts all/pick/none
+bin/contribute --all  # share everything without prompting
+```
+
+This files a GitHub issue on the repo with your records. We validate each submission by re-running the predictor against the submitted task text — if `pred_cost`/`pred_turns` don't match within 20%, the record is rejected. A stable anonymous `contributor_id` is generated on first run and stored in `data/contributor_id` (gitignored).
 
 ## How actuals are recorded
 
