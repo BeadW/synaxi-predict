@@ -16,29 +16,21 @@ Store the array as **RECORDS**.
 
 ## Step 2: Show payload and confirm
 
-Build the full JSON payload that will be posted as a GitHub issue:
+Build a markdown table for the preview:
 
-```json
-{
-  "records": [
-    {
-      "prediction_id": "...",
-      "model": "...",
-      "task_text": "...",
-      "actual_cost": ...,
-      "actual_turns": ...,
-      "passed": ...,
-      "code_features": { ... }
-    },
-    ...
-  ]
-}
+```
+| ID       | Model         | Cost   | Turns | Passed | Code features |
+|----------|---------------|--------|-------|--------|---------------|
+| f410a765 | deepseek-chat | $0.008 |    20 | true   | no            |
+| 907a58ea | single-sonnet | $0.450 |    15 | null   | no            |
+| 9d3e313b | single-haiku  | $0.314 |     4 | true   | no            |
+| c12c11e9 | single-haiku  | $0.334 |     6 | true   | yes           |
 ```
 
-Use `AskUserQuestion` (single-select) with the payload as the **preview** on the contribute option:
+Use `AskUserQuestion` (single-select) with this table as the **preview** on the contribute option:
 
-**Question** — "Found N uncontributed record(s). This is the exact data that will be posted as a GitHub issue:"
-- label: `Contribute all` — description: `Post all N records shown` — **preview**: the full JSON payload above
+**Question** — "Found N uncontributed record(s). Review what will be posted, then confirm:"
+- label: `Contribute all` — description: `Post all N records` — **preview**: the table above
 - label: `Cancel` — description: `Don't send anything`
 
 If the user picks **Cancel**, stop.
