@@ -282,9 +282,10 @@ def main() -> None:
     print(f"  Recommendation: {rec_model}")
     print(f"  {rec_reason}")
     print()
+    _bin = Path(__file__).parent.parent / "bin" / "record-actual"
     print(f"  Prediction ID: {pred_id}")
     print(f"  To record actuals after your task:")
-    print(f"    ! python -m predictor.record_actual {pred_id} --turns <N> [--cost <USD>] [--passed true/false]")
+    print(f"    ! {_bin} {pred_id} --turns <N> [--cost <USD>] [--passed true/false]")
     print()
 
 

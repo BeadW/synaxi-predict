@@ -4,20 +4,18 @@ You are running the synaxi-predict skill: predict cost/turns/pass for a task, le
 
 ## Phase 1: Predict
 
-Capture the repo path, then run the predictor filtered to Claude Code strategies:
+Find the synaxi-predict wrappers and run the predictor:
 
 ```bash
-REPO_PATH="$(pwd)" && python -m predictor.predict "$ARGUMENTS" --models single --repo-path "$REPO_PATH"
-```
-
-If `predictor` is not on PATH, locate and activate the install first:
-
-```bash
-REPO_PATH="$(pwd)" && PREDICT_DIR="$(python3 -c "import predictor, os; print(os.path.dirname(os.path.dirname(predictor.__file__)))" 2>/dev/null || find ~ -name "predict.py" -path "*/predictor/*" -not -path "*/.venv/*" | head -1 | xargs dirname | xargs dirname)" && cd "$PREDICT_DIR" && source .venv/bin/activate 2>/dev/null && python -m predictor.predict "$ARGUMENTS" --models single --repo-path "$REPO_PATH"
+REPO_PATH="$(pwd)"
+PREDICT="$(find ~ -maxdepth 4 -name "predict" -path "*/synaxi-predict/bin/*" 2>/dev/null | head -1)"
+[ -z "$PREDICT" ] && { echo "ERROR: synaxi-predict not found. Clone it to ~/synaxi-predict and run pip install -e ."; exit 1; }
+"$PREDICT" "$ARGUMENTS" --models single --repo-path "$REPO_PATH"
 ```
 
 Show the full output. Extract and store internally:
 - **PRED_ID**: the 8-char hex on the `Prediction ID:` line
+- **PREDICT_BIN**: the path to the `predict` wrapper found above (needed for Phase 4's sibling `record-actual`)
 - The list of model rows with their estimated costs and pass rates
 
 ---
@@ -30,7 +28,7 @@ Use the `AskUserQuestion` tool to present the available models as selectable opt
 
 Always include a final option: label `"Just predict — don't execute"`, description `"Stop here without running the task"`.
 
-Wait for the user's selection before proceeding. If they choose "Just predict", stop here. Otherwise note **CHOSEN_MODEL** and continue to Phase 3.
+Wait for the user's selection. If they choose "Just predict", stop here. Otherwise note **CHOSEN_MODEL** and continue to Phase 3.
 
 ---
 
@@ -46,10 +44,11 @@ Determine clearly whether the task succeeded (tests pass or objective verifiably
 
 ## Phase 4: Record actuals
 
-Run (substituting real values):
+Use the sibling `record-actual` wrapper next to the `predict` binary found in Phase 1:
 
 ```bash
-python -m predictor.record_actual PRED_ID --turns ACTUAL_TURNS --passed true
+RECORD="$(dirname "$PREDICT_BIN")/record-actual"
+"$RECORD" PRED_ID --turns ACTUAL_TURNS --passed true
 ```
 
 Then tell the user:
@@ -57,6 +56,6 @@ Then tell the user:
 ```
 Actuals recorded (PRED_ID — ACTUAL_TURNS turns, passed: true/false).
 
-To log cost too:  ! python -m predictor.record_actual PRED_ID --cost <USD>
+To log cost too:  ! <path-to-record-actual> PRED_ID --cost <USD>
 Find it with `/cost` in Claude Code — use the delta since this task started.
 ```
