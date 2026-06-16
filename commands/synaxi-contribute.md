@@ -39,6 +39,9 @@ If the user picks **Cancel**, stop.
 
 ## Step 3: Contribute
 
+The table above is display-only. The full JSON payload is what actually gets
+posted to GitHub — `bin/contribute --all` handles that automatically.
+
 ```bash
 bin/contribute --all
 ```
