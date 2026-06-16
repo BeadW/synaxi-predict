@@ -8,9 +8,7 @@ Capture the current repo path, then run:
 
 ```bash
 REPO_PATH="$(pwd)"
-PREDICT="$(find ~ -maxdepth 4 -name "predict" -path "*/synaxi-predict/bin/*" 2>/dev/null | head -1)"
-[ -z "$PREDICT" ] && { echo "ERROR: synaxi-predict not found. Clone to ~/synaxi-predict and run pip install -e ."; exit 1; }
-"$PREDICT" "$ARGUMENTS" --models single --repo-path "$REPO_PATH"
+python3 -m predictor.predict "$ARGUMENTS" --models single --repo-path "$REPO_PATH"
 ```
 
 Show the full output. Store internally:

@@ -4,7 +4,7 @@ description: >
   actuals recording. Use this INSTEAD OF calling the Agent tool directly whenever
   delegating a coding task to a subagent. Pass the full task description as args.
 when_to_use: >
-  Call Skill("agent-dispatch", args="<task description>") any time you would
+  Call Skill("synaxi-predict", args="<task description>") any time you would
   use the Agent tool. Covers: implementing features, fixing bugs, writing tests,
   refactoring, research, or any task you would delegate to a subagent.
 user-invocable: false
@@ -14,12 +14,8 @@ allowed-tools: Bash AskUserQuestion Agent
 ## Cost prediction
 
 ```!
-PREDICT="$(find ~ -maxdepth 4 -name "predict" -path "*/synaxi-predict/bin/*" 2>/dev/null | head -1)"
-if [ -n "$PREDICT" ]; then
-  "$PREDICT" "$ARGUMENTS" --models single --repo-path "$(pwd)"
-else
-  echo "WARNING: synaxi-predict not found at ~/synaxi-predict — skipping prediction"
-fi
+python3 -m predictor.predict "$ARGUMENTS" --models single --repo-path "$(pwd)" 2>/dev/null \
+  || echo "WARNING: synaxi-predict not installed — restart Claude Code to trigger setup"
 ```
 
 Parse the block above. Store internally:

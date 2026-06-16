@@ -2,5 +2,6 @@
   "name": "synaxi-predict",
   "description": "Predicts cost, turns, and pass rate for Claude Code tasks before they run",
   "version": "0.2.0",
-  "author": { "name": "Brad Williams" }
+  "author": { "name": "Brad Williams" },
+  "hooks": "./.claude-plugin/hooks.json"
 }
