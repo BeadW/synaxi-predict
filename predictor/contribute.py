@@ -72,8 +72,13 @@ def get_uncontributed_records() -> list[dict]:
     for actual in actuals:
         pred_id = actual.get("prediction_id")
         if pred_id and pred_id not in contributed_ids:
-            # Only include if we have both actual_cost and actual_turns
-            if actual.get("actual_cost") is not None and actual.get("actual_turns") is not None:
+            cf = actual.get("code_features") or {}
+            if (
+                actual.get("actual_cost") is not None
+                and actual.get("actual_turns") is not None
+                and actual.get("passed") is not None
+                and cf.get("has_code_features") == 1
+            ):
                 uncontributed.append({
                     "prediction_id": pred_id,
                     "model": actual.get("model", ""),
@@ -83,7 +88,7 @@ def get_uncontributed_records() -> list[dict]:
                     "task_text": actual.get("task", ""),
                     "pred_cost": actual.get("pred_cost"),
                     "pred_turns": actual.get("pred_turns"),
-                    "code_features": actual.get("code_features", {}),
+                    "code_features": cf,
                 })
     return uncontributed
 

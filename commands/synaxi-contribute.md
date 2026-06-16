@@ -8,7 +8,16 @@ You are running the synaxi-contribute command. Follow these steps in order.
 python3 -m predictor.contribute --list 2>/dev/null
 ```
 
-Parse the JSON array. If it is empty (`[]`), tell the user "No uncontributed records found." and stop.
+Parse the JSON array. Records are pre-filtered by `contribute --list` to only
+include those with all mandatory fields: `actual_cost`, `actual_turns`,
+`passed` (non-null), and `code_features.has_code_features == 1`.
+
+If the array is empty, tell the user:
+```
+No records ready to contribute yet. Records need actual_cost, actual_turns,
+a pass/fail result, and tree-sitter code features before they can be submitted.
+```
+Then stop.
 
 Store the array as **RECORDS**.
 
@@ -19,18 +28,15 @@ Store the array as **RECORDS**.
 Build a markdown table for the preview:
 
 ```
-| ID       | Model         | Cost   | Turns | Passed | Code features |
-|----------|---------------|--------|-------|--------|---------------|
-| f410a765 | deepseek-chat | $0.008 |    20 | true   | no            |
-| 907a58ea | single-sonnet | $0.450 |    15 | null   | no            |
-| 9d3e313b | single-haiku  | $0.314 |     4 | true   | no            |
-| c12c11e9 | single-haiku  | $0.334 |     6 | true   | yes           |
+| ID       | Model        | Cost   | Turns | Passed |
+|----------|--------------|--------|-------|--------|
+| c12c11e9 | single-haiku | $0.334 |     6 | true   |
 ```
 
-Use `AskUserQuestion` (single-select) with this table as the **preview** on the contribute option:
+Use `AskUserQuestion` (single-select) with this table as the **preview**:
 
-**Question** — "Found N uncontributed record(s). Review what will be posted, then confirm:"
-- label: `Contribute all` — description: `Post all N records` — **preview**: the table above
+**Question** — "N record(s) ready to contribute. Review what will be posted, then confirm:"
+- label: `Contribute` — description: `Post N records` — **preview**: the table above
 - label: `Cancel` — description: `Don't send anything`
 
 If the user picks **Cancel**, stop.
@@ -39,8 +45,8 @@ If the user picks **Cancel**, stop.
 
 ## Step 3: Contribute
 
-The table above is display-only. The full JSON payload is what actually gets
-posted to GitHub — `bin/contribute --all` handles that automatically.
+The table above is display-only. `bin/contribute --all` posts the full JSON
+for all eligible records to GitHub.
 
 ```bash
 bin/contribute --all
