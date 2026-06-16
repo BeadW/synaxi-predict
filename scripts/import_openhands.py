@@ -18,7 +18,6 @@ import argparse
 import json
 import re
 import statistics
-from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 

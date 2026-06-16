@@ -166,7 +166,7 @@ def train(runs_dir: Path, models_dir: Path, verbose: bool = True) -> Dict:
         print(f"  code features: {n_with_code}/{len(tok_texts)} ({100*n_with_code//max(len(tok_texts),1)}%)")
         print(f"  turns:             {y_turns.min():.0f}–{y_turns.max():.0f}  (mean {y_turns.mean():.1f})")
         print(f"  completion_tokens: {y_completion.min():.0f}–{y_completion.max():.0f}  (mean {y_completion.mean():.0f})")
-        print(f"  prompt tokens per model (averages):")
+        print("  prompt tokens per model (averages):")
         for m, avg in sorted(avg_prompt_by_model.items()):
             print(f"    {m:<55}  {avg:,.0f} tok")
         print(f"Pass rate samples:  {len(pass_texts)} ({y_pass.mean():.1%} pass)")
@@ -243,6 +243,7 @@ def train(runs_dir: Path, models_dir: Path, verbose: bool = True) -> Dict:
             print(f"  clip {k}: [{np.expm1(lo):.0f}, {np.expm1(hi):.0f}]")
 
     models_dir.mkdir(parents=True, exist_ok=True)
+    from datetime import datetime
     artifact = {
         "tfidf":               tfidf,
         "l2_norm":             l2_norm,
@@ -255,6 +256,7 @@ def train(runs_dir: Path, models_dir: Path, verbose: bool = True) -> Dict:
         "n_train":             len(tok_texts),
         "log_transform":       True,  # turns and completion are log1p-transformed
         "clip_bounds":         clip_bounds,
+        "training_date":       datetime.now().strftime("%Y-%m-%d"),
     }
     out_path = models_dir / "predictor_v1.pkl"
     with open(out_path, "wb") as f:

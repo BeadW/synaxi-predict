@@ -136,7 +136,7 @@ def extract_features(
     fn_count     = all_src.count("def ")
     class_count  = all_src.count("class ")
     import_count = all_src.count("import ")
-    nested_lines = sum(1 for l in all_src.splitlines() if l.startswith("        "))
+    nested_lines = sum(1 for ln in all_src.splitlines() if ln.startswith("        "))
 
     # If we have files, upgrade complexity_score from file evidence
     if test_fn_count > 15:

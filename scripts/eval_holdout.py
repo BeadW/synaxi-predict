@@ -7,12 +7,14 @@ import sys
 import warnings
 from pathlib import Path
 
-import numpy as np
-from scipy.sparse import hstack, csr_matrix
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+import numpy as np  # noqa: E402
+from scipy.sparse import hstack, csr_matrix  # noqa: E402
 
 warnings.filterwarnings("ignore")
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from predictor.train import load_runs, build_dataset
+
+from predictor.train import load_runs, build_dataset  # noqa: E402
 
 PROJECT_ROOT = Path(__file__).parent.parent
 

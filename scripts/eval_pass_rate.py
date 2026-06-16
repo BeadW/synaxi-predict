@@ -7,12 +7,14 @@ import sys
 import warnings
 from pathlib import Path
 
-import numpy as np
-from scipy.sparse import hstack, csr_matrix
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+import numpy as np  # noqa: E402
+from scipy.sparse import hstack, csr_matrix  # noqa: E402
 
 warnings.filterwarnings("ignore")
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from predictor.train import load_runs, build_dataset
+
+from predictor.train import load_runs, build_dataset  # noqa: E402
 
 PROJECT_ROOT = Path(__file__).parent.parent
 
@@ -88,10 +90,7 @@ def main():
     # Per-source breakdown — need to reload raw records to get source labels
     print()
     print("Per-source breakdown (using full dataset, not split):")
-    all_pred = np.clip(m.predict(X_all), 0.0, 1.0)
-
     # Rebuild source labels in same order as build_dataset produces them
-    import sys
     from collections import defaultdict
     src_results = defaultdict(list)
     for f in sorted(PROJECT_ROOT.glob("data/runs/*.jsonl")):

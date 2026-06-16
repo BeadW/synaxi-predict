@@ -36,8 +36,8 @@ try:
 except ImportError:
     pass
 
-from harness.agent import run_task
-from harness.sandbox import TaskSandbox
+from harness.agent import run_task  # noqa: E402
+from harness.sandbox import TaskSandbox  # noqa: E402
 
 RUNS_DIR = PROJECT_ROOT / "data" / "runs"
 
@@ -234,7 +234,6 @@ def evaluate_multi_turn(sandbox: TaskSandbox) -> tuple[float, bool]:
 
 def evaluate_single_turn(response: str, feature_path: Path) -> tuple[float, bool]:
     """Evaluate a single-turn response by executing code against acceptance criteria."""
-    import ast as _ast
     import subprocess as _sp
     import tempfile as _tmp
 
