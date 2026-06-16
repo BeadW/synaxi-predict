@@ -242,7 +242,22 @@ def main() -> None:
     parser.add_argument("--models", default=None)
     parser.add_argument("--model-path", default=str(DEFAULT_MODEL_PATH), type=Path)
     parser.add_argument("--repo-path", default=None, type=Path)
+    parser.add_argument("--version", action="store_true", help="Print the model training date and exit")
+    parser.add_argument("--list-models", action="store_true", help="Print all supported model names, one per line")
     args = parser.parse_args()
+
+    # Handle --list-models flag
+    if args.list_models:
+        for model_name in sorted(_PRICING.keys()):
+            print(model_name)
+        sys.exit(0)
+
+    # Handle --version flag
+    if args.version:
+        artifact = load_artifact(args.model_path)
+        training_date = artifact.get("training_date", "unknown")
+        print(f"Predictor model training date: {training_date}")
+        sys.exit(0)
 
     if args.task == "-":
         task_text = sys.stdin.read().strip()
@@ -284,7 +299,7 @@ def main() -> None:
     print()
     _bin = Path(__file__).parent.parent / "bin" / "record-actual"
     print(f"  Prediction ID: {pred_id}")
-    print(f"  To record actuals after your task:")
+    print("  To record actuals after your task:")
     print(f"    ! {_bin} {pred_id} --turns <N> [--cost <USD>] [--passed true/false]")
     print()
 

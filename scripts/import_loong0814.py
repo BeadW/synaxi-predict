@@ -151,7 +151,6 @@ def process_archive(tar_path: Path, problems: dict[str, str], extract_dir: Path)
         run_label = model_dir.name  # for dedup
 
         task_dirs = sorted(t for t in run_dir.iterdir() if t.is_dir())
-        resolved_count = 0
 
         for task_dir in task_dirs:
             instance_id = task_dir.name

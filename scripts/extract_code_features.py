@@ -137,7 +137,7 @@ def repo_aggregate_stats(repo: Path, task_description: str = "") -> dict:
 
 
 def _parse_changed_files(patch: str) -> list[str]:
-    return [l[6:] for l in patch.splitlines() if l.startswith("+++ b/") and l.endswith(".py")]
+    return [ln[6:] for ln in patch.splitlines() if ln.startswith("+++ b/") and ln.endswith(".py")]
 
 
 def file_stats(path: Path) -> dict | None:

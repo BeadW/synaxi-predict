@@ -89,8 +89,8 @@ def clone_repo(owner_repo: str, clone_base: Path) -> Path | None:
 
 
 def parse_changed_py_files(patch: str) -> list[str]:
-    return [l[6:] for l in (patch or "").splitlines()
-            if l.startswith("+++ b/") and l.endswith(".py")]
+    return [ln[6:] for ln in (patch or "").splitlines()
+            if ln.startswith("+++ b/") and ln.endswith(".py")]
 
 
 def _resolve_file(fp: str, pkg_to_clone: dict[str, Path]) -> Path | None:
