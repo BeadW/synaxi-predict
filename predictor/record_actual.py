@@ -57,7 +57,7 @@ def list_pending() -> None:
     print()
 
 
-def record(pred_id: str, actual_cost: float, actual_turns: int, passed: bool | None) -> None:
+def record(pred_id: str, actual_cost: float | None, actual_turns: int, passed: bool | None) -> None:
     if not PREDICTIONS_FILE.exists():
         print(f"No predictions file found at {PREDICTIONS_FILE}", file=sys.stderr)
         sys.exit(1)
@@ -77,7 +77,7 @@ def record(pred_id: str, actual_cost: float, actual_turns: int, passed: bool | N
         sys.exit(1)
 
     rec = pred.get("recommendation", {})
-    actual = {
+    actual: dict = {
         "prediction_id":   pred_id,
         "timestamp":       datetime.now(timezone.utc).isoformat(),
         "task":            pred.get("task", ""),
@@ -85,12 +85,13 @@ def record(pred_id: str, actual_cost: float, actual_turns: int, passed: bool | N
         "pred_cost":       rec.get("est_cost", 0),
         "pred_turns":      rec.get("est_turns", 0),
         "pred_pass_rate":  rec.get("pass_rate", None),
-        "actual_cost":     round(actual_cost, 6),
+        "actual_cost":     round(actual_cost, 6) if actual_cost is not None else None,
         "actual_turns":    actual_turns,
         "passed":          passed,
-        "cost_error":      round(actual_cost - rec.get("est_cost", 0), 6),
         "turns_error":     actual_turns - rec.get("est_turns", 0),
     }
+    if actual_cost is not None:
+        actual["cost_error"] = round(actual_cost - rec.get("est_cost", 0), 6)
 
     ACTUALS_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(ACTUALS_FILE, "a") as f:
@@ -99,10 +100,12 @@ def record(pred_id: str, actual_cost: float, actual_turns: int, passed: bool | N
     print(f"\n  Recorded: {pred_id}")
     print(f"  Model:        {rec.get('model','')}")
     print(f"  Predicted:    ${rec.get('est_cost',0):.3f} / {rec.get('est_turns',0):.0f} turns")
-    print(f"  Actual:       ${actual_cost:.3f} / {actual_turns} turns")
-    if actual_cost > 0:
-        err_pct = (actual_cost - rec.get('est_cost', 0)) / actual_cost * 100
+    if actual_cost is not None:
+        print(f"  Actual:       ${actual_cost:.3f} / {actual_turns} turns")
+        err_pct = (actual_cost - rec.get('est_cost', 0)) / actual_cost * 100 if actual_cost else 0
         print(f"  Cost error:   {err_pct:+.0f}%")
+    else:
+        print(f"  Actual turns: {actual_turns}  (cost not recorded — add later with --cost <USD>)")
     if passed is not None:
         print(f"  Passed:       {'yes' if passed else 'no'}")
     print()
@@ -111,7 +114,7 @@ def record(pred_id: str, actual_cost: float, actual_turns: int, passed: bool | N
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("prediction_id", nargs="?")
-    parser.add_argument("--cost",   type=float, help="Actual cost in USD")
+    parser.add_argument("--cost",   type=float, default=None, help="Actual cost in USD (optional)")
     parser.add_argument("--turns",  type=int,   help="Actual number of turns")
     parser.add_argument("--passed", type=lambda x: x.lower() in ("1","true","yes"),
                         default=None, help="Did the task pass? (true/false)")
@@ -122,8 +125,8 @@ def main() -> None:
         list_pending()
         return
 
-    if args.cost is None or args.turns is None:
-        parser.error("--cost and --turns are required")
+    if args.turns is None:
+        parser.error("--turns is required")
 
     record(args.prediction_id, args.cost, args.turns, args.passed)
 

@@ -284,7 +284,7 @@ def main() -> None:
     print()
     print(f"  Prediction ID: {pred_id}")
     print(f"  To record actuals after your task:")
-    print(f"    ! cd /Users/brad/Code/synaxi-predict && source .venv/bin/activate && python -m predictor.record_actual {pred_id} --cost <USD> --turns <N> [--passed true/false]")
+    print(f"    ! python -m predictor.record_actual {pred_id} --turns <N> [--cost <USD>] [--passed true/false]")
     print()
 
 
