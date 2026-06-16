@@ -1,0 +1,14 @@
+{
+  "name": "synaxi-predict",
+  "owner": { "name": "Brad Williams" },
+  "plugins": [
+    {
+      "name": "synaxi-predict",
+      "description": "Predicts cost, turns, and pass rate for Claude Code tasks before they run",
+      "source": {
+        "source": "github",
+        "repo": "BeadW/synaxi-predict"
+      }
+    }
+  ]
+}

@@ -27,16 +27,16 @@ A full test suite is planned. For now CI runs the smoke test and lint on every P
 
 ## Skills
 
-The repo ships two Claude Code skills. Both live under `.claude/` and should be installed to `~/.claude/` for personal use:
+The repo ships with a Claude Code plugin containing two skills:
 
 ```bash
-cp .claude/commands/predict-cost.md ~/.claude/commands/
-cp -r .claude/skills/agent-dispatch ~/.claude/skills/
+/plugin marketplace add BeadW/synaxi-predict
+/plugin install synaxi-predict
 ```
 
-**`predict-cost`** (`.claude/commands/predict-cost.md`) — slash command, user-invoked. Shows prediction table, asks for model choice, dispatches subagent, records actuals.
+**`predict-cost`** (`commands/predict-cost.md`) — slash command, user-invoked. Shows prediction table, asks for model choice, dispatches subagent, records actuals.
 
-**`agent-dispatch`** (`.claude/skills/agent-dispatch/SKILL.md`) — `user-invocable: false`, Claude-invoked. Fires automatically whenever Claude would spawn a subagent. Uses dynamic `!` injection to run the prediction at skill load time (tree-sitter features included), then follows the same predict → dispatch → parse → eval → record flow.
+**`agent-dispatch`** (`skills/agent-dispatch/SKILL.md`) — `user-invocable: false`, Claude-invoked. Fires automatically whenever Claude would spawn a subagent. Uses dynamic `!` injection to run the prediction at skill load time (tree-sitter features included), then follows the same predict → dispatch → parse → eval → record flow.
 
 ## How actuals are recorded
 

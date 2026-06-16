@@ -41,11 +41,9 @@ cd ~/synaxi-predict
 git lfs pull              # download trained model (~190MB)
 pip install -e .
 
-# Slash command — manual prediction with model picker
-cp .claude/commands/predict-cost.md ~/.claude/commands/
-
-# Agent-dispatch skill — automatic prediction on every subagent spawn
-cp -r .claude/skills/agent-dispatch ~/.claude/skills/
+# Install the plugin via Claude Code marketplace
+/plugin marketplace add BeadW/synaxi-predict
+/plugin install synaxi-predict
 ```
 
 Copy `.env.example` to `.env` and add your `ANTHROPIC_API_KEY` if you plan to run benchmarks.
@@ -146,8 +144,9 @@ features/code/           Benchmark task definitions (HumanEval, MBPP, etc.)
 data/runs/               Training corpus (JSONL, one record per agent run)
 data/models/             Trained model artifact (Git LFS)
 data/code_features.json  Tree-sitter features per benchmark instance
-.claude/commands/        /predict-cost slash command
-.claude/skills/          agent-dispatch skill (auto-invoked on subagent spawn)
+.claude-plugin/          Plugin metadata (plugin.json, marketplace.json)
+commands/                /predict-cost slash command
+skills/                  agent-dispatch skill (auto-invoked on subagent spawn)
 ```
 
 ## Expanding the dataset
