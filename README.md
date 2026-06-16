@@ -4,51 +4,109 @@
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/)
 [![CI](https://github.com/BeadW/synaxi-predict/actions/workflows/ci.yml/badge.svg)](https://github.com/BeadW/synaxi-predict/actions)
 
-Predicts the cost, turn count, and pass rate of a coding task before you run it — so you can pick the right model without wasting tokens on a bad fit.
+Predicts the cost, turn count, and pass rate of a Claude Code task before it runs — so you can pick the right model without wasting tokens on a bad fit. Closes the loop by capturing actual results and feeding them back into the model.
 
-## What it does
-
-Given a task description (and optionally the current repo), it outputs:
+## How it works
 
 ```
-  Model                  Est. cost    Turns    Pass
-  ──────────────────────────────────────────────────
-  single-haiku           $    0.22     8.3    43%
-  single-sonnet          $    0.61    26.4    71%  ◀ recommended
+/predict-cost Fix the failing migration
+        │
+        ▼
+  Model              Est. cost   Turns   Pass
+  ─────────────────────────────────────────────
+  single-haiku       $    0.35    28.1    8%  ◀ recommended
+  single-sonnet      $    0.62    18.4   11%
+        │
+        ▼  [you pick a model]
+        │
+        ▼
+  Subagent runs the task with the chosen model
+        │
+        ├─ bin/parse-session reads the subagent's session JSONL
+        │   → exact turns, token counts, real cost (not estimated)
+        │
+        ├─ Eval agent checks git diff + test output → passed: true/false
+        │
+        └─ bin/record-actual logs prediction vs. actuals
+           → feeds back into next training run
 ```
 
-The predictor is an MLP trained on ~53k agent runs across SWE-bench, SWE-smith, OpenHands, and loong0814 benchmarks, plus real Claude Code runs. It uses TF-IDF on task text + tree-sitter code features from the current repo.
+Predictions use an MLP trained on ~53k agent runs (SWE-bench, SWE-smith, OpenHands, loong0814, real Claude Code runs). Input features: TF-IDF on task text + tree-sitter code complexity features from the current repo.
 
-## Quick start
-
-**Install from source:**
-
-```bash
-git clone https://github.com/BeadW/synaxi-predict
-cd synaxi-predict
-git lfs pull                        # download the trained model (~190MB)
-pip install -e .
-python -m predictor.predict "Fix the failing migration" --models single
-```
-
-**As a Claude Code skill** (works from any project):
+## Install
 
 ```bash
 git clone https://github.com/BeadW/synaxi-predict ~/synaxi-predict
-cd ~/synaxi-predict && git lfs pull && pip install -e .
+cd ~/synaxi-predict
+git lfs pull              # download trained model (~190MB)
+pip install -e .
 
-# Slash command for manual prediction
+# Slash command — manual prediction with model picker
 cp .claude/commands/predict-cost.md ~/.claude/commands/
 
-# Agent-dispatch skill: wraps the Agent tool with prediction + recording
+# Agent-dispatch skill — automatic prediction on every subagent spawn
 cp -r .claude/skills/agent-dispatch ~/.claude/skills/
 ```
 
-**Manual prediction:** In any Claude Code session: `/predict-cost Fix the failing migration`
+Copy `.env.example` to `.env` and add your `ANTHROPIC_API_KEY` if you plan to run benchmarks.
 
-**Automatic prediction:** Claude invokes `agent-dispatch` automatically whenever it decides to spawn a subagent — no explicit command needed. It predicts cost, asks which model to use, dispatches the agent, then records actual turns and cost against the prediction.
+## Usage
 
-Both skills auto-detect the current repo's code complexity via tree-sitter for more accurate predictions.
+### Manual: `/predict-cost`
+
+In any Claude Code session, type:
+
+```
+/predict-cost Fix the failing login migration
+```
+
+Claude runs the predictor, shows the table, and asks which model you want. After you pick, it dispatches a subagent with that model, then automatically records the actual cost and turns against the prediction.
+
+### Automatic: `agent-dispatch` skill
+
+Once installed, Claude invokes this skill automatically whenever it decides to spawn a subagent — no explicit command needed. The prediction table is computed at skill load time via dynamic injection (tree-sitter code features included), so there's no extra tool call overhead.
+
+### CLI
+
+```bash
+# Predict for a task (shows all models)
+bin/predict "Add OAuth login" --repo-path /path/to/project
+
+# Predict for Claude Code models only
+bin/predict "Add OAuth login" --models single --repo-path .
+
+# List all supported models
+bin/predict --list-models
+
+# Show model training date
+bin/predict --version
+
+# Parse a subagent session for exact metrics (agentId from Agent tool result)
+bin/parse-session <agentId> /path/to/project
+
+# Record actuals manually
+bin/record-actual <pred_id> --turns 18 --cost 0.42 --passed true
+```
+
+## Closed-loop recording
+
+Every completed task produces a ground-truth record in `data/actuals_live.jsonl`:
+
+```json
+{
+  "prediction_id": "c7df172d",
+  "model": "single-haiku",
+  "pred_cost": 0.504,  "actual_cost": 0.243,
+  "pred_turns": 86.8,  "actual_turns": 8,
+  "passed": true
+}
+```
+
+After accumulating enough actuals, retrain:
+
+```bash
+python -m predictor.train
+```
 
 ## Training data
 
@@ -58,50 +116,7 @@ Both skills auto-detect the current repo's code complexity via tree-sitter for m
 | loong0814 mini | 9,990 | SWE-bench Verified, 5 models |
 | OpenHands SWE-bench Lite | 5,693 | 19 models, real pass/fail |
 | loong0814 full | 3,639 | Real API costs from accumulated_cost |
-| Claude Code runs | 725 | HumanEval/MBPP runs, upsampled to ~20% of training |
-
-## Adding your own runs
-
-Record actuals after a task to improve future predictions:
-
-```bash
-python -m predictor.record_actual <prediction_id> --cost 0.42 --turns 18 --passed true
-```
-
-Retrain after accumulating new data:
-
-```bash
-python -m predictor.train
-```
-
-## Expanding the dataset
-
-Each `scripts/import_*.py` pulls a public benchmark dataset and normalizes it into `data/runs/`. To add a new source, write an importer that produces JSONL with these fields:
-
-```json
-{
-  "task_id": "source/instance_id",
-  "strategy": "model-id",
-  "task_text": "description of the task",
-  "prompt_tokens_raw": 45000,
-  "completion_tokens": 8200,
-  "num_turns": 32,
-  "total_cost_usd": 0.84,
-  "passed_criteria": true,
-  "mode": "multi-turn"
-}
-```
-
-`prompt_tokens_raw` = context at the final API call. `completion_tokens` = total across all turns.
-
-## Code features
-
-Tree-sitter features are pre-computed for SWE-bench Lite/Verified and SWE-smith instances and stored in `data/code_features.json`. To regenerate (requires repo clones):
-
-```bash
-python scripts/extract_code_features.py        # SWE-bench
-python scripts/extract_swe_smith_features.py   # SWE-smith (clones 129 repos)
-```
+| Claude Code runs | 725 | HumanEval/MBPP runs, upsampled ~14× |
 
 ## Model performance (held-out 20%)
 
@@ -111,21 +126,53 @@ python scripts/extract_swe_smith_features.py   # SWE-smith (clones 129 repos)
 | completion tokens | 0.32 | 2,936 tok | 75% |
 | pass rate (AUC-ROC) | 0.91 | — | 84% acc |
 
+Turn predictions are calibrated for SWE-bench-style tasks; real Claude Code runs tend to use fewer turns than predicted. This improves as more actuals are recorded via `agent-dispatch`.
+
 ## Repo structure
 
 ```
-predictor/               Core prediction + training logic
-scripts/                 Dataset importers, feature extractors, eval tools
+bin/                     Executable wrappers (predict, record-actual, parse-session)
+predictor/               Core prediction, training, and session-parsing logic
+  predict.py             CLI entry point and cost calculation
+  train.py               MLP training pipeline
+  parse_session.py       Parses Claude Code session JSONL for exact metrics
+  record_actual.py       Records actuals against predictions
+scripts/                 Dataset importers and eval tools
+  import_*.py            Normalise benchmark datasets → data/runs/
+  extract_*.py           Compute tree-sitter features for benchmark repos
+  eval_holdout.py        R², MAE, within-2× on 20% holdout
+  eval_pass_rate.py      AUC-ROC, Brier score, calibration
 features/code/           Benchmark task definitions (HumanEval, MBPP, etc.)
 data/runs/               Training corpus (JSONL, one record per agent run)
 data/models/             Trained model artifact (Git LFS)
 data/code_features.json  Tree-sitter features per benchmark instance
-.claude/commands/        Claude Code slash command
+.claude/commands/        /predict-cost slash command
+.claude/skills/          agent-dispatch skill (auto-invoked on subagent spawn)
 ```
+
+## Expanding the dataset
+
+Each `scripts/import_*.py` pulls a public benchmark and normalises it into `data/runs/`. New importers should produce JSONL with:
+
+```json
+{
+  "task_id":           "source/instance_id",
+  "strategy":          "model-id",
+  "task_text":         "description of the task",
+  "prompt_tokens_raw": 45000,
+  "completion_tokens": 8200,
+  "num_turns":         32,
+  "total_cost_usd":    0.84,
+  "passed_criteria":   true,
+  "mode":              "multi-turn"
+}
+```
+
+`prompt_tokens_raw` = context size at the final API call. `completion_tokens` = total across all turns.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). PRs welcome — especially new benchmark importers.
+See [CONTRIBUTING.md](CONTRIBUTING.md). PRs welcome — especially new benchmark importers and actuals data.
 
 ## License
 
