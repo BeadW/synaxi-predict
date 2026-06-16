@@ -261,7 +261,23 @@ def main() -> None:
         action="store_true",
         help="Auto-contribute all uncontributed records without prompting"
     )
+    parser.add_argument(
+        "--ids",
+        nargs="+",
+        metavar="PREDICTION_ID",
+        help="Contribute specific records by prediction ID (non-interactive)"
+    )
+    parser.add_argument(
+        "--list",
+        action="store_true",
+        help="Print uncontributed records as JSON and exit (for skill use)"
+    )
     args = parser.parse_args()
+
+    if args.list:
+        uncontributed = get_uncontributed_records()
+        print(json.dumps(uncontributed))
+        sys.exit(0)
 
     # Check gh installation and authentication
     if not check_gh_auth():
@@ -282,7 +298,13 @@ def main() -> None:
 
     print_summary_table(uncontributed)
 
-    if args.all:
+    if args.ids:
+        id_set = set(args.ids)
+        selected = [r for r in uncontributed if r["prediction_id"] in id_set]
+        missing = id_set - {r["prediction_id"] for r in selected}
+        if missing:
+            print(f"  ⚠️  Unknown or already-contributed IDs: {', '.join(sorted(missing))}", file=sys.stderr)
+    elif args.all:
         selected = uncontributed
     else:
         selected = prompt_user_selection(uncontributed)
