@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "synaxi-predict"
-version = "0.3.0"
+version = "0.3.1"
 description = "Predicts cost, turns, and pass rate for coding agent runs before they start"
 readme = "README.md"
 license = { text = "MIT" }
