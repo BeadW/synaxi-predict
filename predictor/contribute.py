@@ -1,5 +1,5 @@
 """
-Share actual cost/turns data with the HuggingFace community to improve the predictor.
+Share actual cost/turns data via GitHub issues to improve the predictor.
 
 Usage:
     python -m predictor.contribute             # Interactive mode
@@ -11,19 +11,30 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
+import secrets
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 PROJECT_ROOT = Path(__file__).parent.parent
-ACTUALS_FILE = PROJECT_ROOT / "data" / "actuals_live.jsonl"
-PREDICTIONS_FILE = PROJECT_ROOT / "data" / "predictions_live.jsonl"
-CONTRIBUTED_FILE = PROJECT_ROOT / "data" / "contributed.json"
+DATA_DIR = PROJECT_ROOT / "data"
+CONTRIBUTOR_ID_FILE = DATA_DIR / "contributor_id"
+ACTUALS_FILE = DATA_DIR / "actuals_live.jsonl"
+CONTRIBUTED_FILE = DATA_DIR / "contributed.json"
+REPO = "BeadW/synaxi-predict"
 
-HF_DATASET_REPO = "BeadW/synaxi-predict-actuals"
-HF_DATASET_FILE = "actuals.jsonl"
+
+def get_or_create_contributor_id() -> str:
+    """Load contributor ID from file, or generate a new one if it doesn't exist."""
+    if CONTRIBUTOR_ID_FILE.exists():
+        return CONTRIBUTOR_ID_FILE.read_text().strip()
+
+    contributor_id = secrets.token_hex(4)  # 8-char hex ID
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    CONTRIBUTOR_ID_FILE.write_text(contributor_id)
+    print(f"  Generated new contributor ID: {contributor_id}\n")
+    return contributor_id
 
 
 def load_contributed_ids() -> set[str]:
@@ -35,21 +46,6 @@ def load_contributed_ids() -> set[str]:
         return set(data.get("contributed_ids", []))
     except Exception:
         return set()
-
-
-def load_predictions() -> dict[str, dict]:
-    """Load all predictions indexed by prediction_id."""
-    preds = {}
-    if not PREDICTIONS_FILE.exists():
-        return preds
-    for line in PREDICTIONS_FILE.read_text().splitlines():
-        if line.strip():
-            try:
-                p = json.loads(line)
-                preds[p["prediction_id"]] = p
-            except Exception:
-                pass
-    return preds
 
 
 def load_actuals() -> list[dict]:
@@ -71,7 +67,6 @@ def get_uncontributed_records() -> list[dict]:
     """Get list of records with actuals that haven't been contributed yet."""
     contributed_ids = load_contributed_ids()
     actuals = load_actuals()
-    predictions = load_predictions()
 
     uncontributed = []
     for actual in actuals:
@@ -79,7 +74,6 @@ def get_uncontributed_records() -> list[dict]:
         if pred_id and pred_id not in contributed_ids:
             # Only include if we have both actual_cost and actual_turns
             if actual.get("actual_cost") is not None and actual.get("actual_turns") is not None:
-                pred = predictions.get(pred_id, {})
                 uncontributed.append({
                     "prediction_id": pred_id,
                     "model": actual.get("model", ""),
@@ -121,37 +115,49 @@ def print_summary_table(records: list[dict]) -> None:
     print()
 
 
-def check_hf_token() -> str:
-    """Check if HF_TOKEN is set. If not, print instructions and exit."""
-    token = os.environ.get("HF_TOKEN")
-    if token:
-        return token
-
-    print("\n  ⚠️  HF_TOKEN not found. To contribute data, you need a HuggingFace API token.\n")
-    print("  Steps to get your token:")
-    print("    1. Go to https://huggingface.co/settings/tokens")
-    print("    2. Create a new token with 'write' access")
-    print("    3. Copy the token and set it as an environment variable:")
-    print("       export HF_TOKEN='your_token_here'\n")
-    print("  Then try again:\n")
-    print("    bin/contribute\n")
-    sys.exit(0)
-
-
-def upload_to_huggingface(records: list[dict], token: str) -> bool:
-    """Upload records to HuggingFace dataset using huggingface_hub."""
+def check_gh_auth() -> bool:
+    """Check if gh is installed and authenticated."""
     try:
-        from huggingface_hub import CommitOperationAdd, HfApi, hf_hub_download
-    except ImportError:
-        print("  Error: huggingface_hub is not installed.", file=sys.stderr)
-        sys.exit(1)
+        subprocess.run(
+            ["gh", "auth", "status"],
+            capture_output=True,
+            check=True,
+            timeout=5,
+        )
+        return True
+    except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return False
 
-    api = HfApi(token=token)
 
+def ensure_contribution_label() -> None:
+    """Ensure the 'contribution' label exists in the repo."""
     try:
-        jsonl_lines = []
-        for rec in records:
-            entry = {
+        subprocess.run(
+            [
+                "gh",
+                "label",
+                "create",
+                "contribution",
+                "--repo",
+                REPO,
+                "--color",
+                "0075ca",
+                "--force",
+            ],
+            capture_output=True,
+            timeout=10,
+        )
+    except Exception:
+        pass  # Label may already exist or other error; continue anyway
+
+
+def create_github_issue(contributor_id: str, records: list[dict]) -> bool:
+    """Create a GitHub issue with the contribution data."""
+    # Build the issue body
+    body_data = {
+        "contributor_id": contributor_id,
+        "records": [
+            {
                 "prediction_id": rec["prediction_id"],
                 "model": rec["model"],
                 "pred_cost": rec["pred_cost"],
@@ -162,43 +168,39 @@ def upload_to_huggingface(records: list[dict], token: str) -> bool:
                 "task_text": rec["task_text"],
                 "contributed_at": datetime.now(timezone.utc).isoformat(),
             }
-            jsonl_lines.append(json.dumps(entry, separators=(",", ":")))
+            for rec in records
+        ],
+    }
 
-        # Download existing file content so we can append
-        file_content = ""
-        try:
-            file_path = hf_hub_download(
-                repo_id=HF_DATASET_REPO,
-                filename=HF_DATASET_FILE,
-                repo_type="dataset",
-                token=token,
-            )
-            with open(file_path) as f:
-                file_content = f.read()
-        except Exception:
-            pass
+    body = json.dumps(body_data, indent=2)
 
-        if file_content and not file_content.endswith("\n"):
-            file_content += "\n"
-        file_content += "\n".join(jsonl_lines) + "\n"
-
-        api.create_commit(
-            repo_id=HF_DATASET_REPO,
-            repo_type="dataset",
-            commit_message=f"Add {len(records)} contributed actuals record(s)",
-            operations=[
-                CommitOperationAdd(
-                    path_in_repo=HF_DATASET_FILE,
-                    path_or_fileobj=file_content.encode("utf-8"),
-                )
+    try:
+        result = subprocess.run(
+            [
+                "gh",
+                "issue",
+                "create",
+                "--repo",
+                REPO,
+                "--title",
+                f"synaxi-predict contribution [{contributor_id}]",
+                "--body",
+                body,
+                "--label",
+                "contribution",
             ],
-            token=token,
-            create_pr=False,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
         )
-
+        print(f"  ✓ Created issue: {result.stdout.strip()}")
         return True
+    except subprocess.CalledProcessError as e:
+        print(f"  ✗ Failed to create issue: {e.stderr}", file=sys.stderr)
+        return False
     except Exception as e:
-        print(f"  Error uploading to HuggingFace: {e}", file=sys.stderr)
+        print(f"  ✗ Unexpected error: {e}", file=sys.stderr)
         return False
 
 
@@ -207,7 +209,7 @@ def save_contributed_ids(new_ids: list[str]) -> None:
     contributed_ids = load_contributed_ids()
     contributed_ids.update(new_ids)
 
-    CONTRIBUTED_FILE.parent.mkdir(parents=True, exist_ok=True)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
     data = {
         "contributed_ids": sorted(list(contributed_ids)),
         "last_contributed_at": datetime.now(timezone.utc).isoformat(),
@@ -253,6 +255,17 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    # Check gh installation and authentication
+    if not check_gh_auth():
+        print("\n  ⚠️  GitHub CLI (gh) is not installed or not authenticated.\n")
+        print("  Steps to set up:")
+        print("    1. Install gh: https://cli.github.com/")
+        print("    2. Authenticate: gh auth login\n")
+        print("  Then try again:\n")
+        print("    bin/contribute\n")
+        sys.exit(0)
+
+    contributor_id = get_or_create_contributor_id()
     uncontributed = get_uncontributed_records()
 
     if not uncontributed:
@@ -270,18 +283,17 @@ def main() -> None:
         print("  No records selected. Exiting.\n")
         sys.exit(0)
 
-    print(f"\n  Uploading {len(selected)} record(s) to HuggingFace...")
+    print(f"\n  Creating GitHub issue with {len(selected)} record(s)...")
 
-    token = check_hf_token()
-    success = upload_to_huggingface(selected, token)
+    ensure_contribution_label()
+    success = create_github_issue(contributor_id, selected)
 
     if success:
         pred_ids = [rec["prediction_id"] for rec in selected]
         save_contributed_ids(pred_ids)
         print(f"\n  ✓ Successfully contributed {len(selected)} record(s)!\n")
-        print(f"  View the dataset: https://huggingface.co/datasets/{HF_DATASET_REPO}\n")
     else:
-        print("\n  ✗ Upload failed. Records were not marked as contributed.\n")
+        print("\n  ✗ Failed to create contribution issue.\n")
         sys.exit(1)
 
 
