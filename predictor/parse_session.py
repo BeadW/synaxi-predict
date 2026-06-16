@@ -15,11 +15,22 @@ from predictor.predict import _DEFAULT_PRICING, _PRICING
 
 
 def find_session_file(agent_id: str, cwd: Path) -> Path | None:
-    # Claude Code encodes paths by replacing every "/" with "-" (leading slash becomes leading dash)
+    """Find session file by agent ID, searching all project directories if needed."""
+    # First try: Claude Code encodes paths by replacing every "/" with "-" (leading slash becomes leading dash)
     encoded = str(cwd).replace("/", "-")
     projects_dir = Path.home() / ".claude" / "projects" / encoded
-    matches = list(projects_dir.rglob(f"agent-{agent_id}.jsonl"))
-    return matches[0] if matches else None
+    if projects_dir.exists():
+        matches = list(projects_dir.rglob(f"agent-{agent_id}.jsonl"))
+        if matches:
+            return matches[0]
+
+    # Fallback: search all project directories for the agent file (slower but more robust)
+    projects_base = Path.home() / ".claude" / "projects"
+    if projects_base.exists():
+        matches = list(projects_base.rglob(f"agent-{agent_id}.jsonl"))
+        return matches[0] if matches else None
+
+    return None
 
 
 def parse_session(path: Path) -> dict:

@@ -49,6 +49,10 @@ data = [
     "tree-sitter-python>=0.21",
     "pyarrow>=14.0",
 ]
+api = [
+    "fastapi>=0.100",
+    "uvicorn>=0.23",
+]
 
 [project.urls]
 Homepage = "https://github.com/BeadW/synaxi-predict"
@@ -57,6 +61,9 @@ Issues = "https://github.com/BeadW/synaxi-predict/issues"
 
 [project.scripts]
 synaxi-predict = "predictor.predict:main"
+synaxi-contribute = "predictor.contribute:main"
+synaxi-record-actual = "predictor.record_actual:main"
+synaxi-parse-session = "predictor.parse_session:main"
 
 [tool.pytest.ini_options]
 testpaths = ["harness/tests"]
