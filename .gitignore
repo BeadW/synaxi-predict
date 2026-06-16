@@ -8,6 +8,7 @@ build/
 
 # Secrets
 .env
+data/contributor_id
 
 # Large data not in repo
 data/swe_smith/
