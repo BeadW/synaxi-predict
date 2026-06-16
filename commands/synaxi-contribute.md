@@ -61,6 +61,10 @@ One option per record in this chunk:
 Note: do NOT add `preview` to these options — previews are not supported on
 multiSelect questions and will be silently ignored.
 
+**Important**: if the user selects nothing on a page (or dismisses it), treat
+that as "no selections from this page" and continue to the next page. Do NOT
+stop early. Only evaluate totals after all pages have been shown.
+
 After all pages: collect all ticked records into **SELECTED_RECORDS**.
 
 If none selected across all pages, tell the user "Nothing selected." and stop.
