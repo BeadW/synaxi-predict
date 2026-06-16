@@ -44,20 +44,6 @@ Skip to Step 4.
 
 ## Step 3b: If "Select individual"
 
-Build a preview string for each record — a JSON block showing exactly what will be sent:
-
-```
-{
-  "prediction_id": "<id>",
-  "model": "<model>",
-  "task_text": "<full task_text>",
-  "actual_cost": <actual_cost>,
-  "actual_turns": <actual_turns>,
-  "passed": <passed>,
-  "code_features": <code_features as JSON>
-}
-```
-
 Use `AskUserQuestion` with `multiSelect: true`:
 
 **Question** — "Which records do you want to contribute?"
@@ -65,7 +51,8 @@ Use `AskUserQuestion` with `multiSelect: true`:
 One option per record:
 - **label**: `<prediction_id>`
 - **description**: `<model> · $<actual_cost> · <actual_turns> turns · passed:<passed> · <first 60 chars of task_text>`
-- **preview**: the JSON block built above for this record
+
+Note: do NOT add `preview` to these options — previews are not supported on multiSelect questions and will be silently ignored.
 
 Store **SELECTED_RECORDS** = the full record objects for the chosen options.
 
