@@ -31,17 +31,24 @@ pip install -e .
 python -m predictor.predict "Fix the failing migration" --models single
 ```
 
-**As a Claude Code slash command** (works from any project):
+**As a Claude Code skill** (works from any project):
 
 ```bash
 git clone https://github.com/BeadW/synaxi-predict ~/synaxi-predict
 cd ~/synaxi-predict && git lfs pull && pip install -e .
+
+# Slash command for manual prediction
 cp .claude/commands/predict-cost.md ~/.claude/commands/
+
+# Agent-dispatch skill: wraps the Agent tool with prediction + recording
+cp -r .claude/skills/agent-dispatch ~/.claude/skills/
 ```
 
-Then in any Claude Code session: `/predict-cost Fix the failing migration`
+**Manual prediction:** In any Claude Code session: `/predict-cost Fix the failing migration`
 
-The command auto-detects the current repo and uses its code complexity as an additional signal.
+**Automatic prediction:** Claude invokes `agent-dispatch` automatically whenever it decides to spawn a subagent — no explicit command needed. It predicts cost, asks which model to use, dispatches the agent, then records actual turns and cost against the prediction.
+
+Both skills auto-detect the current repo's code complexity via tree-sitter for more accurate predictions.
 
 ## Training data
 
