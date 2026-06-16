@@ -96,7 +96,12 @@ def calculate_cost(model: str, prompt_tokens: int, completion_tokens: int, num_t
 
 def load_artifact(path: Path = DEFAULT_MODEL_PATH) -> Dict:
     with open(path, "rb") as f:
-        return pickle.load(f)
+        artifact = pickle.load(f)
+    # Older pickles lack clip; sklearn 1.1–1.5 checks self.clip in transform().
+    scaler = artifact.get("code_scaler")
+    if scaler is not None and not hasattr(scaler, "clip"):
+        scaler.clip = False
+    return artifact
 
 
 def _detect_git_root() -> Optional[Path]:
