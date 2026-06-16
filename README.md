@@ -31,7 +31,7 @@ Predicts the cost, turn count, and pass rate of a Claude Code task before it run
            → feeds back into next training run
 ```
 
-Predictions use an MLP trained on ~53k agent runs (SWE-bench, SWE-smith, OpenHands, loong0814, real Claude Code runs). Input features: TF-IDF on task text + tree-sitter code complexity features from the current repo.
+Predictions use an MLP trained on ~53k agent runs (SWE-bench, SWE-smith, OpenHands, loong0814, real Claude Code runs). Input features: TF-IDF on task text + tree-sitter code complexity features from the current repo (see [Features](#features)).
 
 ## Install
 
@@ -97,9 +97,31 @@ bin/parse-session <agentId> /path/to/project
 bin/record-actual <pred_id> --turns 18 --cost 0.42 --passed true
 ```
 
+## Features
+
+Each prediction combines three input groups:
+
+**1. Text features** — TF-IDF (L2-normalised) over the model name prepended to the task description. Captures task type, verb, domain keywords.
+
+**2. Tree-sitter code features** — extracted from the Python files in your repo at prediction time. Requires `tree-sitter` and `tree-sitter-python` (included in core dependencies). If unavailable the model falls back to text features only.
+
+| Feature | Description |
+|---------|-------------|
+| `loc` | Total lines of code across changed/all `.py` files |
+| `functions` | Count of `def` statements |
+| `classes` | Count of `class` statements |
+| `branches` | `if` + `for` + `while` statements |
+| `try_blocks` | `try/except` blocks |
+| `n_files` | Number of `.py` files analysed |
+| `avg_loc` | `loc / n_files` |
+| `branch_density` | `branches / max(loc, 1)` |
+| `has_code_features` | `1` if extraction succeeded, `0` if it fell back to zeros |
+
+**3. Model context** — per-model average prompt tokens from training data (proxy for context window pressure).
+
 ## Closed-loop recording
 
-Every completed task produces a ground-truth record in `data/actuals_live.jsonl`:
+Every completed task produces a ground-truth record in `data/actuals_live.jsonl`, including the tree-sitter snapshot taken at prediction time:
 
 ```json
 {
@@ -107,9 +129,16 @@ Every completed task produces a ground-truth record in `data/actuals_live.jsonl`
   "model": "single-haiku",
   "pred_cost": 0.504,  "actual_cost": 0.243,
   "pred_turns": 86.8,  "actual_turns": 8,
-  "passed": true
+  "passed": true,
+  "code_features": {
+    "loc": 9042, "functions": 460, "classes": 94,
+    "branches": 623, "try_blocks": 51, "n_files": 30,
+    "avg_loc": 301.4, "branch_density": 0.069, "has_code_features": 1
+  }
 }
 ```
+
+The `code_features` field is what makes contributed actuals valuable for retraining — it lets the model learn from real Claude Code runs on real codebases, not just SWE-bench benchmarks.
 
 After accumulating enough actuals, retrain:
 
@@ -182,14 +211,20 @@ Each `scripts/import_*.py` pulls a public benchmark and normalises it into `data
 
 ## Contributing data
 
-If you've accumulated actuals from real tasks, you can share them to help improve the model:
+Actuals from real Claude Code runs are the most valuable training signal — benchmark data (SWE-bench etc.) doesn't capture how the model behaves on everyday coding tasks or typical codebases.
+
+Every time the `synaxi-predict` skill completes a task it writes a record to `data/actuals_live.jsonl` containing the task text, actual turns/cost, pass result, and the tree-sitter code features of your repo at prediction time. You can share these records to improve the model for everyone:
 
 ```bash
 bin/contribute      # shows uncontributed records, prompts to share via GitHub issue
-bin/contribute --all  # non-interactive
+bin/contribute --all  # non-interactive, contributes everything
 ```
 
-Requires `gh` CLI to be authenticated. Each contribution is validated against the predictor before being accepted into the training set.
+Requires the `gh` CLI to be authenticated (`gh auth login`). Each record is posted as a GitHub issue with the `contribution` label and validated before being merged into the training set.
+
+**What gets shared:** task text, model name, predicted vs actual turns/cost, pass/fail, and the `code_features` snapshot. No file contents, no diffs, no personal information.
+
+**When to contribute:** after a few tasks have accumulated — check with `bin/contribute` to see what's pending. The more diverse the tasks and codebases, the better the calibration for real Claude Code usage.
 
 ## Contributing code
 
