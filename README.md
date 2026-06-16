@@ -9,7 +9,7 @@ Predicts the cost, turn count, and pass rate of a Claude Code task before it run
 ## How it works
 
 ```
-/predict-cost Fix the failing migration
+/synaxi-predict Fix the failing migration
         │
         ▼
   Model              Est. cost   Turns   Pass
@@ -61,17 +61,17 @@ pip install -e .
 
 ## Usage
 
-### Manual: `/predict-cost`
+### Manual: `/synaxi-predict`
 
 In any Claude Code session, type:
 
 ```
-/predict-cost Fix the failing login migration
+/synaxi-predict Fix the failing login migration
 ```
 
 Claude runs the predictor, shows the table, and asks which model you want. After you pick, it dispatches a subagent with that model, then automatically records the actual cost and turns against the prediction.
 
-### Automatic: `agent-dispatch` skill
+### Automatic: `synaxi-predict` skill
 
 Once installed, Claude invokes this skill automatically whenever it decides to spawn a subagent — no explicit command needed. The prediction table is computed at skill load time via dynamic injection (tree-sitter code features included), so there's no extra tool call overhead.
 
@@ -135,7 +135,7 @@ python -m predictor.train
 | completion tokens | 0.32 | 2,936 tok | 75% |
 | pass rate (AUC-ROC) | 0.91 | — | 84% acc |
 
-Turn predictions are calibrated for SWE-bench-style tasks; real Claude Code runs tend to use fewer turns than predicted. This improves as more actuals are recorded via `agent-dispatch`.
+Turn predictions are calibrated for SWE-bench-style tasks; real Claude Code runs tend to use fewer turns than predicted. This improves as more actuals are recorded via the `synaxi-predict` skill.
 
 ## Repo structure
 
@@ -156,8 +156,8 @@ data/runs/               Training corpus (JSONL, one record per agent run)
 data/models/             Trained model artifact (Git LFS)
 data/code_features.json  Tree-sitter features per benchmark instance
 .claude-plugin/          Plugin metadata (plugin.json, marketplace.json)
-commands/                /predict-cost slash command
-skills/                  agent-dispatch skill (auto-invoked on subagent spawn)
+commands/                /synaxi-predict slash command
+skills/                  synaxi-predict skill (auto-invoked on subagent spawn)
 ```
 
 ## Expanding the dataset

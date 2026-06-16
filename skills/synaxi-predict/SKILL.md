@@ -4,7 +4,7 @@ description: >
   actuals recording. Use this INSTEAD OF calling the Agent tool directly whenever
   delegating a coding task to a subagent. Pass the full task description as args.
 when_to_use: >
-  Call Skill("agent-dispatch", args="<task description>") any time you would
+  Call Skill("synaxi-predict", args="<task description>") any time you would
   use the Agent tool. Covers: implementing features, fixing bugs, writing tests,
   refactoring, research, or any task you would delegate to a subagent.
 user-invocable: false
