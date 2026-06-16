@@ -1,39 +1,36 @@
-You are running the synaxi-predict skill. This is a three-phase flow: predict → user selects model → execute task → record actuals. Follow each phase in order.
+You are running the synaxi-predict skill: predict cost/turns/pass for a task, let the user pick a model, execute, then record actuals. Follow the phases in order.
 
 ---
 
 ## Phase 1: Predict
 
-Capture the repo path, then run the predictor:
+Capture the repo path, then run the predictor filtered to Claude Code strategies:
 
 ```bash
-REPO_PATH="$(pwd)" && python -m predictor.predict "$ARGUMENTS" --repo-path "$REPO_PATH"
+REPO_PATH="$(pwd)" && python -m predictor.predict "$ARGUMENTS" --models single --repo-path "$REPO_PATH"
 ```
 
-If `predictor` is not on PATH, locate and activate the install:
+If `predictor` is not on PATH, locate and activate the install first:
 
 ```bash
-REPO_PATH="$(pwd)" && PREDICT_DIR="$(python -c "import predictor, os; print(os.path.dirname(os.path.dirname(predictor.__file__)))" 2>/dev/null || find ~ -name "predict.py" -path "*/predictor/*" -not -path "*/.venv/*" | head -1 | xargs dirname | xargs dirname)" && cd "$PREDICT_DIR" && source .venv/bin/activate 2>/dev/null; python -m predictor.predict "$ARGUMENTS" --repo-path "$REPO_PATH"
+REPO_PATH="$(pwd)" && PREDICT_DIR="$(python3 -c "import predictor, os; print(os.path.dirname(os.path.dirname(predictor.__file__)))" 2>/dev/null || find ~ -name "predict.py" -path "*/predictor/*" -not -path "*/.venv/*" | head -1 | xargs dirname | xargs dirname)" && cd "$PREDICT_DIR" && source .venv/bin/activate 2>/dev/null && python -m predictor.predict "$ARGUMENTS" --models single --repo-path "$REPO_PATH"
 ```
 
 Show the full output. Extract and store internally:
 - **PRED_ID**: the 8-char hex on the `Prediction ID:` line
-- **RECOMMENDED**: the model marked with `◀ recommended`
+- The list of model rows with their estimated costs and pass rates
 
 ---
 
-## Phase 2: Model selection — PAUSE HERE
+## Phase 2: Model selection
 
-After displaying the prediction table, output **only** this question and stop. Do not proceed to Phase 3 until the user responds.
+Use the `AskUserQuestion` tool to present the available models as selectable options. Build one option per model row from the prediction table, using this format:
+- **label**: the model name (e.g. `single-haiku`, `single-sonnet`)
+- **description**: `Est. $X.XX · N turns · X% pass`
 
-```
-Which model would you like to use for this task?
+Always include a final option: label `"Just predict — don't execute"`, description `"Stop here without running the task"`.
 
-Enter the model name, a number from the table, or press Enter to use the recommendation.
-(If you want a different Claude tier, start a new session: `claude --model <model-id>` then re-run this command.)
-```
-
-Wait for the user's reply. Note their chosen model as **CHOSEN_MODEL**. Then continue to Phase 3.
+Wait for the user's selection before proceeding. If they choose "Just predict", stop here. Otherwise note **CHOSEN_MODEL** and continue to Phase 3.
 
 ---
 
@@ -41,15 +38,15 @@ Wait for the user's reply. Note their chosen model as **CHOSEN_MODEL**. Then con
 
 Work on the task: **$ARGUMENTS**
 
-Use all available tools — read files, edit code, run tests, search the codebase — to complete it. Keep a running count of every tool call you make (each Bash, Read, Edit, Write, Grep call = 1 turn).
+Use all available tools — read files, edit code, run tests — to complete it. Count every tool call (Bash, Read, Edit, Write, Grep) as one turn.
 
-Determine clearly whether the task succeeded (tests pass, objective verifiably achieved, or explicitly failed/unresolved).
+Determine clearly whether the task succeeded (tests pass or objective verifiably achieved).
 
 ---
 
 ## Phase 4: Record actuals
 
-After completing the task, run the record command. Substitute the real values for PRED_ID, ACTUAL_TURNS, and true/false:
+Run (substituting real values):
 
 ```bash
 python -m predictor.record_actual PRED_ID --turns ACTUAL_TURNS --passed true
@@ -60,8 +57,6 @@ Then tell the user:
 ```
 Actuals recorded (PRED_ID — ACTUAL_TURNS turns, passed: true/false).
 
-To also log the cost (improves future predictions):
-  ! python -m predictor.record_actual PRED_ID --cost <USD_amount>
-
-Get the cost from `/cost` in Claude Code — use the delta since this task started.
+To log cost too:  ! python -m predictor.record_actual PRED_ID --cost <USD>
+Find it with `/cost` in Claude Code — use the delta since this task started.
 ```
