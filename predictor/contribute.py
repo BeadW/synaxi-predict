@@ -141,7 +141,7 @@ def check_hf_token() -> str:
 def upload_to_huggingface(records: list[dict], token: str) -> bool:
     """Upload records to HuggingFace dataset using huggingface_hub."""
     try:
-        from huggingface_hub import CommitOperations, HfApi
+        from huggingface_hub import CommitOperationAdd, HfApi, hf_hub_download
     except ImportError:
         print("  Error: huggingface_hub is not installed.", file=sys.stderr)
         sys.exit(1)
@@ -149,17 +149,7 @@ def upload_to_huggingface(records: list[dict], token: str) -> bool:
     api = HfApi(token=token)
 
     try:
-        # Check if repo exists, create if not
-        try:
-            api.repo_info(repo_id=HF_DATASET_REPO, repo_type="dataset")
-        except Exception:
-            # Repo doesn't exist, will be created on first commit
-            pass
-
-        # Prepare JSONL content to append
-        operations = CommitOperations()
         jsonl_lines = []
-
         for rec in records:
             entry = {
                 "prediction_id": rec["prediction_id"],
@@ -174,40 +164,36 @@ def upload_to_huggingface(records: list[dict], token: str) -> bool:
             }
             jsonl_lines.append(json.dumps(entry, separators=(",", ":")))
 
-        # Check if file exists and download current content
+        # Download existing file content so we can append
         file_content = ""
         try:
-            from huggingface_hub import hf_hub_download
-            # Try to get existing file
             file_path = hf_hub_download(
                 repo_id=HF_DATASET_REPO,
                 filename=HF_DATASET_FILE,
                 repo_type="dataset",
                 token=token,
             )
-            with open(file_path, "r") as f:
+            with open(file_path) as f:
                 file_content = f.read()
         except Exception:
-            # File doesn't exist yet, that's fine
             pass
 
-        # Append new records
         if file_content and not file_content.endswith("\n"):
             file_content += "\n"
         file_content += "\n".join(jsonl_lines) + "\n"
-
-        # Upload
-        operations.upload_file(
-            path_in_repo=HF_DATASET_FILE,
-            path_or_fileobj=file_content.encode("utf-8"),
-        )
 
         api.create_commit(
             repo_id=HF_DATASET_REPO,
             repo_type="dataset",
             commit_message=f"Add {len(records)} contributed actuals record(s)",
-            operations=operations,
+            operations=[
+                CommitOperationAdd(
+                    path_in_repo=HF_DATASET_FILE,
+                    path_or_fileobj=file_content.encode("utf-8"),
+                )
+            ],
             token=token,
+            create_pr=False,
         )
 
         return True
