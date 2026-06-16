@@ -129,22 +129,24 @@ def validate_record(record: dict) -> tuple[bool, str]:
         submitted_cost = record.get("pred_cost")
         submitted_turns = record.get("pred_turns")
 
-        # Check if submitted predictions are within 5% of current model predictions
+        # Check submitted predictions against current model output.
+        # 20% tolerance (not 5%) because the model gets retrained between
+        # submission and processing — predictions legitimately drift over time.
         if submitted_cost is not None:
             cost_error = abs(submitted_cost - pred_cost) / max(pred_cost, 0.001)
-            if cost_error > 0.05:
+            if cost_error > 0.20:
                 return (
                     False,
-                    f"Submitted pred_cost {submitted_cost:.4f} differs >5% from current "
+                    f"Submitted pred_cost {submitted_cost:.4f} differs >20% from current "
                     f"predictor output {pred_cost:.4f}",
                 )
 
         if submitted_turns is not None:
             turns_error = abs(submitted_turns - pred_turns) / max(pred_turns, 1)
-            if turns_error > 0.05:
+            if turns_error > 0.20:
                 return (
                     False,
-                    f"Submitted pred_turns {submitted_turns:.1f} differs >5% from current "
+                    f"Submitted pred_turns {submitted_turns:.1f} differs >20% from current "
                     f"predictor output {pred_turns:.1f}",
                 )
 
