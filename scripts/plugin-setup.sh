@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PLUGIN_VERSION="0.2.0"
+PLUGIN_VERSION="0.3.0"
 MODEL_RELEASE_URL="https://github.com/BeadW/synaxi-predict/releases/download/v${PLUGIN_VERSION}/predictor_v1.pkl"
 
 # Resolve user data dir the same way platformdirs does
