@@ -222,12 +222,20 @@ def save_contributed_ids(new_ids: list[str]) -> None:
 
 def prompt_user_selection(records: list[dict]) -> list[dict]:
     """Prompt user to select which records to contribute."""
+    import sys
+
     print("  Select which records to share (all / pick / none):")
     print("    [a] Share all records")
     print("    [p] Pick individual records")
     print("    [n] Don't share anything")
     print()
-    response = input("  Your choice [a/p/n]: ").strip().lower()
+
+    try:
+        response = input("  Your choice [a/p/n]: ").strip().lower()
+    except EOFError:
+        # In non-interactive mode (pipe/redirect), default to all records
+        print("  (non-interactive mode: defaulting to all records)")
+        return records
 
     if response == "a":
         return records
