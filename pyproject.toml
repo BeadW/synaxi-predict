@@ -34,6 +34,8 @@ dependencies = [
     "python-dotenv",
     "huggingface-hub>=0.20",
     "platformdirs>=4.0",
+    "tree-sitter>=0.21",
+    "tree-sitter-python>=0.21",
 ]
 
 [project.optional-dependencies]
@@ -45,8 +47,6 @@ dev = [
 ]
 data = [
     "datasets>=2.0",
-    "tree-sitter>=0.21",
-    "tree-sitter-python>=0.21",
     "pyarrow>=14.0",
 ]
 api = [

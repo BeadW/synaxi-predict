@@ -72,8 +72,13 @@ def get_uncontributed_records() -> list[dict]:
     for actual in actuals:
         pred_id = actual.get("prediction_id")
         if pred_id and pred_id not in contributed_ids:
-            # Only include if we have both actual_cost and actual_turns
-            if actual.get("actual_cost") is not None and actual.get("actual_turns") is not None:
+            cf = actual.get("code_features") or {}
+            if (
+                actual.get("actual_cost") is not None
+                and actual.get("actual_turns") is not None
+                and actual.get("passed") is not None
+                and cf.get("has_code_features") == 1
+            ):
                 uncontributed.append({
                     "prediction_id": pred_id,
                     "model": actual.get("model", ""),
@@ -83,7 +88,7 @@ def get_uncontributed_records() -> list[dict]:
                     "task_text": actual.get("task", ""),
                     "pred_cost": actual.get("pred_cost"),
                     "pred_turns": actual.get("pred_turns"),
-                    "code_features": actual.get("code_features", {}),
+                    "code_features": cf,
                 })
     return uncontributed
 
@@ -261,7 +266,23 @@ def main() -> None:
         action="store_true",
         help="Auto-contribute all uncontributed records without prompting"
     )
+    parser.add_argument(
+        "--ids",
+        nargs="+",
+        metavar="PREDICTION_ID",
+        help="Contribute specific records by prediction ID (non-interactive)"
+    )
+    parser.add_argument(
+        "--list",
+        action="store_true",
+        help="Print uncontributed records as JSON and exit (for skill use)"
+    )
     args = parser.parse_args()
+
+    if args.list:
+        uncontributed = get_uncontributed_records()
+        print(json.dumps(uncontributed))
+        sys.exit(0)
 
     # Check gh installation and authentication
     if not check_gh_auth():
@@ -282,7 +303,13 @@ def main() -> None:
 
     print_summary_table(uncontributed)
 
-    if args.all:
+    if args.ids:
+        id_set = set(args.ids)
+        selected = [r for r in uncontributed if r["prediction_id"] in id_set]
+        missing = id_set - {r["prediction_id"] for r in selected}
+        if missing:
+            print(f"  ⚠️  Unknown or already-contributed IDs: {', '.join(sorted(missing))}", file=sys.stderr)
+    elif args.all:
         selected = uncontributed
     else:
         selected = prompt_user_selection(uncontributed)

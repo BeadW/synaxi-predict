@@ -141,6 +141,10 @@ def _extract_repo_stats(artifact: Dict, task_text: str, repo_path: Optional[Path
         from scripts.extract_code_features import repo_aggregate_stats
         return repo_aggregate_stats(repo_path, task_description=task_text)
     except Exception:
+        # Return empty dict on tree-sitter unavailability (missing dependency, import failure, etc).
+        # This allows graceful degradation: predictions continue without code features, just using
+        # text TF-IDF features. Downstream _make_feature_row() handles empty repo_stats by filling
+        # code feature columns with zeros.
         return {}
 
 
@@ -174,7 +178,25 @@ def predict(
     model_path: Path = DEFAULT_MODEL_PATH,
     repo_path: Optional[Path] = None,
 ) -> tuple[List[Dict], Dict]:
-    """Return (results, repo_stats). repo_stats is the raw code feature dict for logging."""
+    """Predict cost, turns, prompt tokens, completion tokens, and pass rate for each model.
+
+    Features used:
+    - Text features: TF-IDF vectors (L2-normalized) combining model name and task description
+    - Code features: Tree-sitter derived repository statistics (function/class counts, complexity
+      metrics, etc.) if repo_path is provided, MaxAbsScaled for normalization
+    - Model context: Per-model historical average prompt tokens (from training data)
+
+    Args:
+        task_text: Description of the coding task to predict for
+        models: Optional list of model name patterns to filter results (case-insensitive substring match)
+        model_path: Path to the trained predictor artifact (pickle file)
+        repo_path: Optional path to code repository for feature extraction; auto-detected via git root if None
+
+    Returns:
+        Tuple of (results, repo_stats) where:
+        - results: List of dicts with predictions per model (est_cost, est_turns, est_prompt_tok, etc.)
+        - repo_stats: Raw code feature dict extracted from repository for logging
+    """
     artifact  = load_artifact(model_path)
     mdls      = artifact["models"]
     available = artifact.get("model_list", [])
