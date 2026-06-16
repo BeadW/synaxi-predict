@@ -28,7 +28,19 @@ import numpy as np
 warnings.filterwarnings("ignore", category=RuntimeWarning, module="sklearn")
 
 PROJECT_ROOT = Path(__file__).parent.parent
-DEFAULT_MODEL_PATH = PROJECT_ROOT / "data" / "models" / "predictor_v1.pkl"
+
+def _default_model_path() -> Path:
+    """Resolve model path: check user data dir first, fall back to repo."""
+    try:
+        from platformdirs import user_data_dir
+        p = Path(user_data_dir("synaxi-predict")) / "models" / "predictor_v1.pkl"
+        if p.exists():
+            return p
+    except ImportError:
+        pass
+    return PROJECT_ROOT / "data" / "models" / "predictor_v1.pkl"
+
+DEFAULT_MODEL_PATH = _default_model_path()
 PREDICTIONS_FILE = PROJECT_ROOT / "data" / "predictions_live.jsonl"
 
 # Pricing per token: (input, output, cache_write, cache_read)
