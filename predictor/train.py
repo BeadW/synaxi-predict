@@ -106,9 +106,14 @@ def build_dataset(records: List[Dict], code_features: Dict) -> Tuple:
         model = r.get("strategy", "unknown")
         text = f"modelname {model.replace('-', ' ')} endmodelname {task_text}"
 
-        raw_id = r.get("task_id", "")
-        instance_id = raw_id.split("/")[-1].replace(".feature", "")
-        cf = code_features.get(instance_id, {})
+        # Prefer inline code_features (from user contributions) over the benchmark lookup.
+        inline_cf = r.get("code_features")
+        if inline_cf:
+            cf = inline_cf
+        else:
+            raw_id = r.get("task_id", "")
+            instance_id = raw_id.split("/")[-1].replace(".feature", "")
+            cf = code_features.get(instance_id, {})
         code_row = [float(cf.get(col, 0)) for col in CODE_FEATURE_COLS]
 
         if _has_valid_tokens(r):

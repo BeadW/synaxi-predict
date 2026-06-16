@@ -118,7 +118,7 @@ def validate_record(record: dict) -> tuple[bool, str]:
     try:
         from predictor.predict import predict
 
-        results = predict(task_text)
+        results, _ = predict(task_text)
         pred_result = next((r for r in results if r["model"] == model), None)
 
         if pred_result is None:
@@ -175,6 +175,7 @@ def append_to_training_data(
                 "total_cost_usd": record["actual_cost"],
                 "cost_is_estimated": False,
                 "passed_criteria": record["passed"],
+                "code_features": record.get("code_features") or {},
             }
             f.write(json.dumps(entry, separators=(",", ":")) + "\n")
 

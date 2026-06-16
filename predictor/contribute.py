@@ -83,6 +83,7 @@ def get_uncontributed_records() -> list[dict]:
                     "task_text": actual.get("task", ""),
                     "pred_cost": actual.get("pred_cost"),
                     "pred_turns": actual.get("pred_turns"),
+                    "code_features": actual.get("code_features", {}),
                 })
     return uncontributed
 
@@ -166,6 +167,7 @@ def create_github_issue(contributor_id: str, records: list[dict]) -> bool:
                 "actual_turns": rec["actual_turns"],
                 "passed": rec["passed"],
                 "task_text": rec["task_text"],
+                "code_features": rec.get("code_features", {}),
                 "contributed_at": datetime.now(timezone.utc).isoformat(),
             }
             for rec in records
