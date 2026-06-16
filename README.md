@@ -35,16 +35,23 @@ Predictions use an MLP trained on ~53k agent runs (SWE-bench, SWE-smith, OpenHan
 
 ## Install
 
+**1. Install the Python package** (provides the predictor CLI and model artifact):
+
 ```bash
 git clone https://github.com/BeadW/synaxi-predict ~/synaxi-predict
 cd ~/synaxi-predict
-git lfs pull              # download trained model (~190MB)
+git lfs pull        # download trained model (~190MB)
 pip install -e .
+```
 
-# Install the plugin via Claude Code marketplace
+**2. Install the Claude Code plugin** (run these inside a Claude Code session):
+
+```
 /plugin marketplace add BeadW/synaxi-predict
 /plugin install synaxi-predict
 ```
+
+The plugin auto-updates whenever a new version is released — no manual file copying needed.
 
 Copy `.env.example` to `.env` and add your `ANTHROPIC_API_KEY` if you plan to run benchmarks.
 
@@ -169,7 +176,18 @@ Each `scripts/import_*.py` pulls a public benchmark and normalises it into `data
 
 `prompt_tokens_raw` = context size at the final API call. `completion_tokens` = total across all turns.
 
-## Contributing
+## Contributing data
+
+If you've accumulated actuals from real tasks, you can share them to help improve the model:
+
+```bash
+bin/contribute      # shows uncontributed records, prompts to share via GitHub issue
+bin/contribute --all  # non-interactive
+```
+
+Requires `gh` CLI to be authenticated. Each contribution is validated against the predictor before being accepted into the training set.
+
+## Contributing code
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). PRs welcome — especially new benchmark importers and actuals data.
 
