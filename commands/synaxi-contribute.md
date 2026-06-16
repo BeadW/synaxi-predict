@@ -44,19 +44,26 @@ Skip to Step 4.
 
 ## Step 3b: If "Select individual"
 
+`AskUserQuestion` supports a maximum of 4 options per question. Paginate through
+RECORDS in chunks of 4, asking one question per page. Accumulate all ticked records
+across pages into **SELECTED_RECORDS**.
+
+For each page (chunk of up to 4 records):
+
 Use `AskUserQuestion` with `multiSelect: true`:
 
-**Question** — "Which records do you want to contribute?"
+**Question** — "Select records to contribute (page P of N):"
 
-One option per record:
+One option per record in this chunk:
 - **label**: `<prediction_id>`
 - **description**: `<model> · $<actual_cost> · <actual_turns> turns · passed:<passed> · <first 60 chars of task_text>`
 
-Note: do NOT add `preview` to these options — previews are not supported on multiSelect questions and will be silently ignored.
+Note: do NOT add `preview` to these options — previews are not supported on
+multiSelect questions and will be silently ignored.
 
-Store **SELECTED_RECORDS** = the full record objects for the chosen options.
+After all pages: collect all ticked records into **SELECTED_RECORDS**.
 
-If none selected, tell the user "Nothing selected." and stop.
+If none selected across all pages, tell the user "Nothing selected." and stop.
 
 ---
 
