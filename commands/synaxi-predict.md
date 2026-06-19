@@ -20,8 +20,20 @@ Show the full output. Store internally:
 
 ## Phase 2: Model selection
 
-Use `AskUserQuestion` with one option per model row from the table:
-- **label**: model name  
+Check whether `$SYNAXI_PREDICT_AUTO` is set:
+
+```bash
+echo "${SYNAXI_PREDICT_AUTO:-}"
+```
+
+**If the variable is non-empty**, skip the question and auto-select the recommended model:
+- Parse the `Recommendation:` line from Phase 1 output to get the model name (e.g. `single-haiku` or `single-sonnet`)
+- Map it to **CHOSEN_MODEL**: `single-haiku` → `haiku`, `single-sonnet` → `sonnet`
+- Print: `Auto mode: using recommended model (CHOSEN_MODEL)`
+- Continue directly to Phase 3.
+
+**Otherwise**, use `AskUserQuestion` with one option per model row from the table:
+- **label**: model name
 - **description**: `Est. $X.XX · N turns · X% pass`
 
 Include a final option: label `"Just predict — don't execute"`, description `"Stop here"`.

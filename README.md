@@ -81,6 +81,16 @@ In any Claude Code session, type:
 
 Claude runs the predictor, shows the table, and asks which model you want. After you pick, it dispatches a subagent with that model, then automatically records the actual cost and turns against the prediction.
 
+**Auto mode:** to skip the prompt and always use the recommended model, add this to your project's `.claude/settings.json`:
+
+```json
+{
+  "env": {
+    "SYNAXI_PREDICT_AUTO": "true"
+  }
+}
+```
+
 ### Automatic: `synaxi-predict` skill
 
 Once installed, Claude invokes this skill automatically whenever it decides to spawn a subagent — no explicit command needed. The prediction table is computed at skill load time via dynamic injection (tree-sitter code features included), so there's no extra tool call overhead.
